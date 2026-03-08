@@ -2,9 +2,11 @@ import React from 'react';
 
 export default function WaitingRoom({ roomId, playerColor, onBack }) {
   const shareUrl = `${window.location.origin}?room=${roomId}`;
+  const shareText = `Join me for a game of Tavla! Room code: ${roomId}\n${shareUrl}`;
 
-  const copyCode = () => navigator.clipboard.writeText(roomId);
-  const copyUrl = () => navigator.clipboard.writeText(shareUrl);
+  const copyCode  = () => navigator.clipboard.writeText(roomId);
+  const copyUrl   = () => navigator.clipboard.writeText(shareUrl);
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
     <div style={{
@@ -48,7 +50,8 @@ export default function WaitingRoom({ roomId, playerColor, onBack }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        {/* Share buttons */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
           <button onClick={copyCode} style={btnStyle}>
             📋 Copy Code
           </button>
@@ -56,6 +59,33 @@ export default function WaitingRoom({ roomId, playerColor, onBack }) {
             🔗 Copy Link
           </button>
         </div>
+
+        {/* WhatsApp invite */}
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            width: '100%',
+            padding: '11px 16px',
+            marginBottom: 24,
+            background: 'rgba(37,211,102,0.1)',
+            border: '1px solid rgba(37,211,102,0.4)',
+            borderRadius: 8,
+            color: '#25d366',
+            fontFamily: 'Playfair Display',
+            fontSize: 14,
+            textDecoration: 'none',
+            cursor: 'pointer',
+            boxSizing: 'border-box',
+          }}
+        >
+          <span style={{ fontSize: 18 }}>💬</span> Invite via WhatsApp
+        </a>
 
         <p style={{ color: '#4a3820', fontFamily: 'Space Mono', fontSize: 11, lineHeight: 1.6, margin: 0 }}>
           Share the code with your opponent.<br />

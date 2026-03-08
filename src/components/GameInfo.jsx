@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { playDiceRoll, playWin } from '../utils/sounds';
 
 function Die({ value, used }) {
   const dots = {
@@ -43,6 +44,13 @@ function Die({ value, used }) {
 
 function ChatPanel({ messages, onSend }) {
   const [text, setText] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSend = () => {
     if (!text.trim()) return;
     onSend(text);
@@ -90,6 +98,8 @@ function ChatPanel({ messages, onSend }) {
             }}>{m.text}</div>
           </div>
         ))}
+        {/* Scroll anchor */}
+        <div ref={messagesEndRef} />
       </div>
       <div style={{ display: 'flex', borderTop: '1px solid rgba(180,140,60,0.15)', padding: 6, gap: 6 }}>
         <input
@@ -135,27 +145,44 @@ export default function GameInfo({
   onRematch,
   roomId,
   opponentConnected,
+  portrait,
 }) {
   if (!gameState) return null;
   const { dice, phase, currentPlayer, winner, borneOff, bar } = gameState;
 
-  const myScore = borneOff[playerColor] || 0;
+  const prevWinnerRef = useRef(null);
+  useEffect(() => {
+    if (winner && winner !== prevWinnerRef.current) {
+      playWin();
+    }
+    prevWinnerRef.current = winner;
+  }, [winner]);
+
+  const myScore  = borneOff[playerColor] || 0;
   const oppScore = borneOff[playerColor === 'white' ? 'black' : 'white'] || 0;
-  const myBar = bar[playerColor] || 0;
-  const oppBar = bar[playerColor === 'white' ? 'black' : 'white'] || 0;
+  const myBar    = bar[playerColor] || 0;
+  const oppBar   = bar[playerColor === 'white' ? 'black' : 'white'] || 0;
 
   const colorLabel = (c) => c === 'white' ? '⬜ Cream' : '🟥 Red';
-  const myLabel = colorLabel(playerColor);
-  const oppLabel = colorLabel(playerColor === 'white' ? 'black' : 'white');
+  const myLabel    = colorLabel(playerColor);
+  const oppLabel   = colorLabel(playerColor === 'white' ? 'black' : 'white');
 
   const isRolling = phase === 'rolling' && isMyTurn;
-  const canRoll = isRolling && opponentConnected;
+  const canRoll   = isRolling && opponentConnected;
 
   const turnText = winner
     ? `${colorLabel(winner)} wins! 🎉`
     : isMyTurn
       ? phase === 'rolling' ? 'Your turn — Roll the dice!' : 'Your turn — Make a move'
       : `${colorLabel(currentPlayer)}'s turn`;
+
+  const shareText = `Join me for a game of Tavla! Room: ${roomId}\n${window.location.origin}?room=${roomId}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
+  const handleRoll = () => {
+    playDiceRoll();
+    onRoll();
+  };
 
   const labelStyle = {
     fontSize: 10,
@@ -176,13 +203,14 @@ export default function GameInfo({
   return (
     <div style={{
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: portrait ? 'row' : 'column',
+      flexWrap: portrait ? 'wrap' : 'nowrap',
       gap: 14,
-      width: 240,
+      width: portrait ? '100%' : 240,
       flexShrink: 0,
     }}>
-      {/* Room code */}
-      <div style={{ ...panelStyle, textAlign: 'center' }}>
+      {/* Room code + WhatsApp */}
+      <div style={{ ...panelStyle, textAlign: 'center', flex: portrait ? '1 1 180px' : 'unset' }}>
         <div style={labelStyle}>Room Code</div>
         <div style={{
           fontSize: 28,
@@ -196,15 +224,38 @@ export default function GameInfo({
             Waiting for opponent...
           </div>
         )}
+        {/* WhatsApp invite */}
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            marginTop: 8,
+            padding: '5px 12px',
+            background: 'rgba(37,211,102,0.12)',
+            border: '1px solid rgba(37,211,102,0.35)',
+            borderRadius: 8,
+            color: '#25d366',
+            fontSize: 11,
+            fontFamily: 'Space Mono',
+            textDecoration: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 14 }}>💬</span> Invite via WhatsApp
+        </a>
       </div>
 
       {/* Player info */}
-      <div style={{ ...panelStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ ...panelStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: portrait ? '1 1 200px' : 'unset' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={labelStyle}>You</div>
           <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 13, fontWeight: 700 }}>{myLabel}</div>
           <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 11, marginTop: 2 }}>
-            {myScore}/15 off {myBar > 0 ? `· ${myBar} on bar` : ''}
+            {myScore}/15 off {myBar > 0 ? `· ${myBar} bar` : ''}
           </div>
         </div>
         <div style={{ color: '#4a3820', fontSize: 20 }}>vs</div>
@@ -212,7 +263,7 @@ export default function GameInfo({
           <div style={labelStyle}>Opponent</div>
           <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 13, fontWeight: 700 }}>{oppLabel}</div>
           <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 11, marginTop: 2 }}>
-            {oppScore}/15 off {oppBar > 0 ? `· ${oppBar} on bar` : ''}
+            {oppScore}/15 off {oppBar > 0 ? `· ${oppBar} bar` : ''}
           </div>
         </div>
       </div>
@@ -224,6 +275,7 @@ export default function GameInfo({
         borderColor: isMyTurn ? 'rgba(200,168,75,0.5)' : 'rgba(180,140,60,0.2)',
         background: isMyTurn ? 'rgba(200,168,75,0.08)' : 'rgba(0,0,0,0.25)',
         transition: 'all 0.3s ease',
+        flex: portrait ? '1 1 160px' : 'unset',
       }}>
         <div style={{
           color: winner ? '#ffd700' : isMyTurn ? '#c8a84b' : '#6a5028',
@@ -235,7 +287,7 @@ export default function GameInfo({
       </div>
 
       {/* Dice */}
-      <div style={panelStyle}>
+      <div style={{ ...panelStyle, flex: portrait ? '1 1 200px' : 'unset' }}>
         <div style={labelStyle}>Dice</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 60, alignItems: 'center' }}>
           {dice.length === 0 ? (
@@ -247,7 +299,7 @@ export default function GameInfo({
 
         {canRoll && (
           <button
-            onClick={onRoll}
+            onClick={handleRoll}
             style={{
               marginTop: 10,
               width: '100%',
@@ -273,7 +325,7 @@ export default function GameInfo({
 
         {phase === 'moving' && isMyTurn && (
           <div style={{ marginTop: 8, color: '#7a6030', fontSize: 11, fontFamily: 'Space Mono', textAlign: 'center' }}>
-            Click a checker to move
+            Click or drag a checker to move
           </div>
         )}
       </div>
@@ -294,6 +346,7 @@ export default function GameInfo({
             fontSize: 15,
             cursor: 'pointer',
             letterSpacing: 1,
+            flex: portrait ? '1 1 auto' : 'unset',
           }}
         >
           🔄 Rematch
@@ -301,7 +354,7 @@ export default function GameInfo({
       )}
 
       {/* Chat */}
-      <div>
+      <div style={{ flex: portrait ? '1 1 100%' : 'unset' }}>
         <div style={labelStyle}>Chat</div>
         <ChatPanel messages={chatMessages} onSend={onSendChat} />
       </div>
