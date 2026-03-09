@@ -6,13 +6,13 @@ import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 
 // Board natural pixel dimensions (from Board.jsx layout constants)
-// Width:  12 pts×54 + 11 gaps×2 + bar 60 + bearoff 55 + 3 inter-gaps×2 + felt-pad 12 + outer-pad 16 + border 6 = 823
-// Height: top 180 + centre 30 + bottom 180 + row-margins 8 + felt-pad 16 + outer-pad 32 + border 6 = 452
-const BOARD_W = 823;
-const BOARD_H = 452;
+// Width:  12 pts×36 + 11 gaps×2 + bar 50 + bearoff 44 + 3 inter-gaps×2 + felt-pad 12 + outer-pad 16 + border 6 = 586
+// Height: top 290 + centre 30 + bottom 290 + row-margins 8 + felt-pad 16 + outer-pad 32 + border 6 = 672
+const BOARD_W = 586;
+const BOARD_H = 672;
 const SIDEBAR_W = 240;
 const GAP = 20;
-const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 1083
+const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 846
 
 // Target: board fills 2/3 of viewport height
 const TARGET_H_RATIO = 2 / 3;
