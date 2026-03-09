@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { playDiceRoll, playWin } from '../utils/sounds';
 
-function Die({ value, used }) {
+function Die({ value, used, size = 44 }) {
   const dots = {
     1: [[50,50]],
     2: [[25,25],[75,75]],
@@ -10,11 +10,12 @@ function Die({ value, used }) {
     5: [[25,25],[75,25],[50,50],[25,75],[75,75]],
     6: [[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]],
   };
+  const dot = Math.round(size * 0.18);
   return (
     <div style={{
-      width: 44, height: 44,
+      width: size, height: size,
       background: used ? 'rgba(30,30,30,0.5)' : 'linear-gradient(135deg, #f5f0e0, #e8dfc0)',
-      borderRadius: 9,
+      borderRadius: Math.round(size * 0.2),
       border: used ? '2px solid #333' : '2px solid #c8b870',
       position: 'relative',
       boxShadow: used ? 'none' : '0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8)',
@@ -24,7 +25,7 @@ function Die({ value, used }) {
     }}>
       {value && dots[value] && dots[value].map(([x, y], i) => (
         <div key={i} style={{
-          position: 'absolute', width: 8, height: 8, borderRadius: '50%',
+          position: 'absolute', width: dot, height: dot, borderRadius: '50%',
           background: used ? '#555' : '#1a1208',
           left: `${x}%`, top: `${y}%`, transform: 'translate(-50%,-50%)',
         }} />
@@ -33,7 +34,7 @@ function Die({ value, used }) {
   );
 }
 
-function ChatPanel({ messages, onSend }) {
+function ChatPanel({ messages, onSend, portrait }) {
   const [text, setText] = useState('');
   const endRef = useRef(null);
 
@@ -48,7 +49,8 @@ function ChatPanel({ messages, onSend }) {
   return (
     <div style={{
       background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(180,140,60,0.2)',
-      borderRadius: 10, display: 'flex', flexDirection: 'column', height: 180, overflow: 'hidden',
+      borderRadius: 10, display: 'flex', flexDirection: 'column',
+      height: portrait ? 180 : '100%', overflow: 'hidden',
     }}>
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {messages.length === 0 && (
@@ -89,7 +91,7 @@ function ChatPanel({ messages, onSend }) {
 export default function GameInfo({
   gameState, playerColor, isMyTurn, onRoll,
   chatMessages, onSendChat, onRematch,
-  opponentConnected, portrait,
+  opponentConnected, portrait, boardH,
 }) {
   if (!gameState) return null;
   const { dice, phase, currentPlayer, winner, borneOff, bar } = gameState;
@@ -117,6 +119,7 @@ export default function GameInfo({
       : `${colorLabel(currentPlayer)}'s turn`;
 
   const handleRoll = () => { playDiceRoll(); onRoll(); };
+  const dieSize = dice.length > 2 ? 38 : 48;
 
   const labelStyle = {
     fontSize: 10, color: '#6a5028', fontFamily: 'Space Mono',
@@ -136,6 +139,7 @@ export default function GameInfo({
       gap: 14,
       width: portrait ? '100%' : 240,
       maxWidth: portrait ? '100%' : 240,
+      height: portrait ? 'auto' : boardH,
       flexShrink: 0,
       boxSizing: 'border-box',
       minWidth: 0,
@@ -198,10 +202,10 @@ export default function GameInfo({
       {/* Dice */}
       <div style={{ ...panelStyle, flex: portrait ? '1 1 200px' : 'unset' }}>
         <div style={labelStyle}>Dice</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 52, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', justifyContent: 'center', minHeight: dieSize, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
           {dice.length === 0
             ? <div style={{ color: '#3a2810', fontFamily: 'Space Mono', fontSize: 11 }}>—</div>
-            : dice.map((d, i) => <Die key={i} value={d} used={false} />)
+            : dice.map((d, i) => <Die key={i} value={d} used={false} size={dieSize} />)
           }
         </div>
         {canRoll && (
@@ -240,9 +244,9 @@ export default function GameInfo({
       )}
 
       {/* Chat */}
-      <div style={{ flex: portrait ? '1 1 100%' : 'unset' }}>
+      <div style={{ flex: portrait ? '1 1 100%' : '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <div style={labelStyle}>Chat</div>
-        <ChatPanel messages={chatMessages} onSend={onSendChat} />
+        <ChatPanel messages={chatMessages} onSend={onSendChat} portrait={portrait} />
       </div>
 
       <style>{`@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`}</style>

@@ -188,6 +188,7 @@ export default function App() {
           onRematch={handleRematch}
           opponentConnected={opponentConnected}
           portrait={portrait}
+          boardH={portrait ? undefined : LANDSCAPE_BH}
         />
       </div>
     </div>
