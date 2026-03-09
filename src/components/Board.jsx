@@ -253,7 +253,7 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
 
 // ─── BEAR-OFF TRAY ────────────────────────────────────────────────────────────
 function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }) {
-  const { BEAROFF_W } = d;
+  const { BEAROFF_W, POINT_H } = d;
   return (
     <div
       data-point="bearoff"
@@ -261,7 +261,7 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }
       onDragOver={e => e.preventDefault()}
       onDrop={e => { e.preventDefault(); onDrop && onDrop('bearoff'); }}
       style={{
-        width: BEAROFF_W, height: '100%',
+        width: BEAROFF_W, height: POINT_H,
         background: 'linear-gradient(180deg, #0f1a0a, #1a2a10, #0f1a0a)',
         border: isValidDest ? '2px solid #00e87a' : '2px solid #3a5a2a',
         borderRadius: 4, display: 'flex', flexDirection: 'column', alignItems: 'center',
