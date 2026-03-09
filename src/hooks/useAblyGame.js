@@ -207,6 +207,36 @@ export function useAblyGame() {
     setValidDestinations([]);
   }, [selectedPoint, validDestinations, publishState]);
 
+  // ─── DIRECT MOVE (for touch drag — bypasses stale closure) ───────────────
+  // Uses only refs, never reads selectedPoint/validDestinations from closure.
+  const handleDirectMove = useCallback((from, to) => {
+    const gs = gameStateRef.current;
+    const player = playerColorRef.current;
+    if (!gs || gs.phase !== 'moving' || gs.currentPlayer !== player) return;
+
+    const moves = getValidMoves(gs, from, player);
+    const match = moves.find(d =>
+      to === 'bearoff' ? (d.to === 0 || d.to === 25) : d.to === to
+    );
+
+    if (!match) {
+      // Invalid drop target — select the source so the player can tap a dest
+      if (moves.length > 0) {
+        setSelectedPoint(from);
+        setValidDestinations(moves);
+      }
+      return;
+    }
+
+    const newState = applyMove(gs, from, match.to, match.die);
+    gameStateRef.current = newState;
+    setGameState(newState);
+    setSelectedPoint(null);
+    setValidDestinations([]);
+    publishState(newState);
+    if (newState.phase === 'ended') setStatus('ended');
+  }, [publishState]);
+
   // ─── SEND CHAT ────────────────────────────────────────────────────────────
   const sendChat = useCallback((text) => {
     if (!channelRef.current || !text.trim()) return;
@@ -251,6 +281,7 @@ export function useAblyGame() {
     joinRoom,
     handleRoll,
     handleSelectPoint,
+    handleDirectMove,
     sendChat,
     handleRematch,
   };

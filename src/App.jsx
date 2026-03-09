@@ -13,19 +13,23 @@ const BOARD_H = 672;
 const SIDEBAR_W = 240;
 const GAP = 20;
 const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 846
-
-// Target: board fills 2/3 of viewport height
-const TARGET_H_RATIO = 2 / 3;
+const HEADER_H = 52; // title bar + orientation label
 
 function useScale() {
   const compute = () => {
+    const portrait = window.innerHeight > window.innerWidth;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    // Always side-by-side layout — scale so board+sidebar fits width AND board fills 2/3 height
-    const scaleByWidth  = vw / LANDSCAPE_W;
-    const scaleByHeight = (vh * TARGET_H_RATIO) / BOARD_H;
-    const scale = Math.min(scaleByWidth, scaleByHeight, 2.0);
-    return { scale: Math.max(0.2, scale) };
+    const availH = vh - HEADER_H;
+
+    // Fit board to available screen — no forced ratio
+    const scaleByH = availH / BOARD_H;
+    const scaleByW = portrait
+      ? vw / BOARD_W          // portrait: board fills width
+      : vw / LANDSCAPE_W;     // landscape: board + sidebar fit
+
+    const scale = Math.min(scaleByH, scaleByW, 2.0);
+    return { portrait, scale: Math.max(0.2, scale) };
   };
 
   const [state, setState] = useState(compute);
@@ -45,11 +49,11 @@ export default function App() {
     gameState, playerColor, roomId, status,
     selectedPoint, validDestinations, movableSources,
     opponentConnected, chatMessages, isMyTurn,
-    createRoom, joinRoom, handleRoll, handleSelectPoint,
+    createRoom, joinRoom, handleRoll, handleSelectPoint, handleDirectMove,
     sendChat, handleRematch,
   } = useAblyGame();
 
-  const { scale } = useScale();
+  const { portrait, scale } = useScale();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -70,7 +74,7 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
+      overflow: portrait ? 'auto' : 'hidden',
       fontFamily: 'Playfair Display, serif',
     }}>
       {/* Header */}
@@ -90,9 +94,9 @@ export default function App() {
       {/* Game area — zoom: scale makes board fill 2/3 of screen height */}
       <div style={{
         display: 'flex',
-        flexDirection: 'row',
-        gap: GAP,
-        alignItems: 'flex-start',
+        flexDirection: portrait ? 'column' : 'row',
+        gap: portrait ? 10 : GAP,
+        alignItems: portrait ? 'center' : 'flex-start',
         zoom: scale,
         flexShrink: 0,
       }}>
@@ -104,6 +108,7 @@ export default function App() {
           playerColor={playerColor}
           isMyTurn={isMyTurn}
           onSelectPoint={handleSelectPoint}
+          onDirectMove={handleDirectMove}
         />
         <GameInfo
           gameState={gameState}
@@ -115,7 +120,7 @@ export default function App() {
           onRematch={handleRematch}
           roomId={roomId}
           opponentConnected={opponentConnected}
-          portrait={false}
+          portrait={portrait}
         />
       </div>
 

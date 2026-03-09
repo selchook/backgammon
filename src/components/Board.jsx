@@ -286,7 +286,7 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
 }
 
 // ─── MAIN BOARD ──────────────────────────────────────────────────────────────
-export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint }) {
+export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint, onDirectMove }) {
   if (!gameState) return null;
 
   const { points, bar, borneOff, currentPlayer } = gameState;
@@ -294,31 +294,32 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   // ── Desktop drag ──────────────────────────────────────────────────────────
   const dropOccurred = useRef(false);
 
-  // ── Touch drag — all live values accessed via refs to avoid stale closures ─
-  const boardRef         = useRef(null);
-  const movableRef       = useRef(movableSources);
-  const validDestsRef    = useRef(validDestinations);
-  const onSelectRef      = useRef(onSelectPoint);
-  const isMyTurnRef      = useRef(isMyTurn);
-  const currentPlayerRef = useRef(currentPlayer);
-  const barRef           = useRef(bar);
-  const touchActive      = useRef(false);
+  // ── Touch drag — all live values via refs (no stale closures) ────────────
+  const boardRef          = useRef(null);
+  const movableRef        = useRef(movableSources);
+  const onSelectRef       = useRef(onSelectPoint);
+  const onDirectMoveRef   = useRef(onDirectMove);
+  const isMyTurnRef       = useRef(isMyTurn);
+  const currentPlayerRef  = useRef(currentPlayer);
+  const barRef            = useRef(bar);
+  const touchActive       = useRef(false);
+  const touchSrcRef       = useRef(null); // source point of current touch drag
 
-  // Sync refs every render (no deps array needed — just assignment)
-  movableRef.current       = movableSources;
-  validDestsRef.current    = validDestinations;
-  onSelectRef.current      = onSelectPoint;
-  isMyTurnRef.current      = isMyTurn;
+  // Sync refs every render
+  movableRef.current      = movableSources;
+  onSelectRef.current     = onSelectPoint;
+  onDirectMoveRef.current = onDirectMove;
+  isMyTurnRef.current     = isMyTurn;
   currentPlayerRef.current = currentPlayer;
-  barRef.current           = bar;
+  barRef.current          = bar;
 
   // ── Touch listener setup (once on mount) ─────────────────────────────────
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
 
-    // Floating checker lives in document.body — OUTSIDE any zoomed/transformed
-    // ancestor — so position: fixed coordinates are always viewport-accurate.
+    // Floating checker is appended to document.body — outside any zoomed
+    // container — so its position:fixed coords are always viewport-accurate.
     const fc = document.createElement('div');
     Object.assign(fc.style, {
       display: 'none', position: 'fixed',
@@ -332,7 +333,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
     });
     document.body.appendChild(fc);
 
-    // Walk up DOM from a touch target to find the nearest data-point ancestor
+    // Walk DOM up to find nearest data-point ancestor
     const getPt = (el) => {
       let node = el;
       while (node && node !== document.body) {
@@ -375,7 +376,8 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
       e.preventDefault();
       touchActive.current = true;
-      onSelectRef.current(pt);
+      touchSrcRef.current = pt;           // remember source for direct move
+      onSelectRef.current(pt);            // visual highlight (best-effort)
       showFloat(touch.clientX, touch.clientY, color);
     };
 
@@ -390,23 +392,28 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
     const onTouchEnd = (e) => {
       if (!touchActive.current) return;
       touchActive.current = false;
-      const touch = e.changedTouches[0];
+      const touch  = e.changedTouches[0];
+      const src    = touchSrcRef.current;
+      touchSrcRef.current = null;
 
-      // Hide BEFORE elementFromPoint — otherwise fc itself is the hit target
+      // Hide BEFORE elementFromPoint — otherwise fc blocks hit detection
       hideFloat();
 
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      const pt     = getPt(target);
-      const vd     = validDestsRef.current;
+      const dest   = getPt(target);
 
-      if (pt !== null) {
-        const valid = pt === 'bearoff'
-          ? vd.some(d => d.to === 0 || d.to === 25)
-          : vd.some(d => d.to === pt);
-        if (valid) playCheckerMove();
-        onSelectRef.current(pt);
+      if (dest !== null && dest !== src) {
+        // Real drag: use handleDirectMove which relies only on refs (no stale
+        // closure) — this is the fix for bear-off and all touch-drag moves.
+        playCheckerMove();
+        onDirectMoveRef.current(src, dest);
+      } else if (dest === src) {
+        // Finger lifted on same point → just keep the piece selected (already
+        // selected by onSelectRef in touchStart above).
+        // Nothing extra needed.
       } else {
-        onSelectRef.current(null); // deselect if dropped on felt / outside board
+        // Dropped outside the board → deselect
+        onSelectRef.current(null);
       }
     };
 
@@ -420,7 +427,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
       board.removeEventListener('touchend',   onTouchEnd);
       document.body.removeChild(fc);
     };
-  }, []); // intentionally empty — live state via refs above
+  }, []); // intentionally empty — all live values read via refs above
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const getCheckers   = (pt) => { const p = points[pt]; return (!p || !p.color || p.count === 0) ? [] : Array(p.count).fill(p.color); };
