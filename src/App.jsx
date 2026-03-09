@@ -19,19 +19,13 @@ const TARGET_H_RATIO = 2 / 3;
 
 function useScale() {
   const compute = () => {
-    const portrait = window.innerHeight > window.innerWidth;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    // Scale so board height = 2/3 of viewport
+    // Always side-by-side layout — scale so board+sidebar fits width AND board fills 2/3 height
+    const scaleByWidth  = vw / LANDSCAPE_W;
     const scaleByHeight = (vh * TARGET_H_RATIO) / BOARD_H;
-    // Also constrain so total width fits
-    const scaleByWidth  = portrait
-      ? vw / BOARD_W          // portrait: board fills full width
-      : vw / LANDSCAPE_W;     // landscape: board + sidebar fit
-
-    const scale = Math.min(scaleByHeight, scaleByWidth, 2.0);
-    return { portrait, scale: Math.max(0.2, scale) };
+    const scale = Math.min(scaleByWidth, scaleByHeight, 2.0);
+    return { scale: Math.max(0.2, scale) };
   };
 
   const [state, setState] = useState(compute);
@@ -55,7 +49,7 @@ export default function App() {
     sendChat, handleRematch,
   } = useAblyGame();
 
-  const { portrait, scale } = useScale();
+  const { scale } = useScale();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -76,7 +70,7 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: portrait ? 'auto' : 'hidden',
+      overflow: 'hidden',
       fontFamily: 'Playfair Display, serif',
     }}>
       {/* Header */}
@@ -96,9 +90,9 @@ export default function App() {
       {/* Game area — zoom: scale makes board fill 2/3 of screen height */}
       <div style={{
         display: 'flex',
-        flexDirection: portrait ? 'column' : 'row',
-        gap: portrait ? 10 : GAP,
-        alignItems: portrait ? 'center' : 'flex-start',
+        flexDirection: 'row',
+        gap: GAP,
+        alignItems: 'flex-start',
         zoom: scale,
         flexShrink: 0,
       }}>
@@ -121,7 +115,7 @@ export default function App() {
           onRematch={handleRematch}
           roomId={roomId}
           opponentConnected={opponentConnected}
-          portrait={portrait}
+          portrait={false}
         />
       </div>
 
