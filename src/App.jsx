@@ -6,19 +6,12 @@ import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 
 // Board natural pixel dimensions (from Board.jsx layout constants)
-// Portrait board: H(672) > W(586)
-const PORTRAIT_W  = 586;
-const PORTRAIT_H  = 672;
-// Landscape board: W(~800) > H(~450)
-// 2×(6×52+5×2)+62+56 + outer pad 16 + inner pad 12 + borders 10 ≈ 802
-// 2×180 + centre 30 + margins 8 + outer pad 32 + inner pad 16 + borders 10 ≈ 456
-const LANDSCAPE_BW = 802;
-const LANDSCAPE_BH = 456;
-const SIDEBAR_W    = 240;
-const GAP          = 20;
-const LANDSCAPE_W  = LANDSCAPE_BW + GAP + SIDEBAR_W; // ~1062
-const PORTRAIT_LANDSCAPE_W = PORTRAIT_W + GAP + SIDEBAR_W; // 846 (used for mobile landscape)
-const LOGO_H       = 36; // vertical space reserved for the fixed logo bar
+const BOARD_W    = 586;
+const BOARD_H    = 672;
+const SIDEBAR_W  = 240;
+const GAP        = 20;
+const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 846
+const LOGO_H     = 36; // vertical space reserved for the fixed logo bar
 
 function useLayout() {
   const compute = () => {
