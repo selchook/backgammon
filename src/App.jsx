@@ -5,34 +5,35 @@ import WaitingRoom from './components/WaitingRoom';
 import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 
-// Board natural pixel dimensions (from Board.jsx layout constants)
-const BOARD_W    = 586;
-const BOARD_H    = 672;
-const SIDEBAR_W  = 240;
-const GAP        = 20;
-const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 846
-const LOGO_H     = 36; // vertical space reserved for the fixed logo bar
+// Board natural pixel dimensions — must match Board.jsx P / L constants
+const PORTRAIT_BW  = 586;  // portrait board width
+const PORTRAIT_BH  = 672;  // portrait board height
+const LANDSCAPE_BW = 802;  // landscape board width  (W >> H)
+const LANDSCAPE_BH = 456;  // landscape board height
+const SIDEBAR_W    = 240;
+const GAP          = 20;
+const LOGO_H       = 36;
+// Total widths for scale calculation (board + gap + sidebar)
+const LANDSCAPE_TW = LANDSCAPE_BW + GAP + SIDEBAR_W;  // 1062
 
 function useLayout() {
   const compute = () => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const portrait         = vh > vw;
-    // "mobile landscape": rotated phone (wide but short screen)
-    const mobileLandscape  = !portrait && vh < 520;
+    const portrait        = vh > vw;
+    const mobileLandscape = !portrait && vh < 520;
 
     let scale;
     if (portrait) {
-      // Board fills available width; height constrains if screen is very short
       const availH = vh - LOGO_H;
-      scale = Math.min(vw / BOARD_W, availH / BOARD_H);
+      scale = Math.min(vw / PORTRAIT_BW, availH / PORTRAIT_BH);
     } else if (mobileLandscape) {
-      // Use full viewport height (no header gap) so board is as large as possible
-      scale = Math.min(vh / BOARD_H, vw / LANDSCAPE_W);
+      // Use full vh — landscape board is wide so it fills the short screen
+      scale = Math.min(vh / LANDSCAPE_BH, vw / LANDSCAPE_TW);
     } else {
-      // Desktop / tablet landscape — leave room for fixed logo
+      // Desktop / tablet landscape
       const availH = vh - LOGO_H;
-      scale = Math.min(vw / LANDSCAPE_W, availH / BOARD_H);
+      scale = Math.min(vw / LANDSCAPE_TW, availH / LANDSCAPE_BH);
     }
 
     return { portrait, mobileLandscape, scale: Math.min(2, Math.max(0.2, scale)) };
@@ -167,6 +168,7 @@ export default function App() {
           isMyTurn={isMyTurn}
           onSelectPoint={handleSelectPoint}
           onDirectMove={handleDirectMove}
+          landscape={!portrait}
         />
         <GameInfo
           gameState={gameState}

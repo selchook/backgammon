@@ -2,24 +2,27 @@ import { useRef, useEffect } from 'react';
 import { playCheckerMove } from '../utils/sounds';
 
 // ── Layout constants ─────────────────────────────────────────────────────────
-// Portrait-oriented board: H(672) > W(586)
-// Width:  12 pts×36 + 11 gaps×2 + bar 50 + bearoff 44 + 3 inter-gaps×2 + felt-pad 12 + outer-pad 16 + border 6 = 586
-// Height: top 290 + centre 30 + bottom 290 + row-margins 8 + felt-pad 16 + outer-pad 32 + border 6 = 672
-const POINT_W   = 36;   // triangle width
-const POINT_H   = 290;  // triangle height (tall → portrait board)
-const CHECKER   = 30;   // checker diameter
-const STEP      = 20;   // stack spacing per checker
-const BAR_W     = 50;
-const BEAROFF_W = 44;
+// Portrait board: H(672) > W(586)
+const P = {
+  POINT_W: 36, POINT_H: 290, CHECKER: 30, STEP: 20,
+  BAR_W: 50, BAR_CHECKER: 28, BEAROFF_W: 44, POINT_GAP: 2,
+};
+// Landscape board: W(~800) > H(~450)
+const L = {
+  POINT_W: 52, POINT_H: 180, CHECKER: 40, STEP: 26,
+  BAR_W: 62, BAR_CHECKER: 38, BEAROFF_W: 56, POINT_GAP: 2,
+};
+// Kept for any direct references below
 const POINT_GAP = 2;
 
 // ─── POINT TRIANGLE ──────────────────────────────────────────────────────────
 function PointTriangle({
   pointNumber, isTop, color, checkers,
   isSelected, isValidDest, isMovable,
-  onClick, onDragStart, onDrop,
+  onClick, onDragStart, onDrop, d,
 }) {
   const topCheckerRef = useRef(null);
+  const { POINT_W, POINT_H, CHECKER, STEP } = d;
 
   const triColor = color === 'dark'
     ? 'rgba(120, 60, 20, 0.9)'
@@ -172,9 +175,8 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
-const BAR_CHECKER = 28;
-
-function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn }) {
+function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn, d }) {
+  const { BAR_W, BAR_CHECKER } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
@@ -250,7 +252,8 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
 }
 
 // ─── BEAR-OFF TRAY ────────────────────────────────────────────────────────────
-function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
+function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }) {
+  const { BEAROFF_W } = d;
   return (
     <div
       data-point="bearoff"
@@ -286,10 +289,11 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
 }
 
 // ─── MAIN BOARD ──────────────────────────────────────────────────────────────
-export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint, onDirectMove }) {
+export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint, onDirectMove, landscape }) {
   if (!gameState) return null;
 
   const { points, bar, borneOff, currentPlayer } = gameState;
+  const d = landscape ? L : P;
 
   // ── Desktop drag ──────────────────────────────────────────────────────────
   const dropOccurred = useRef(false);
@@ -302,16 +306,18 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const isMyTurnRef       = useRef(isMyTurn);
   const currentPlayerRef  = useRef(currentPlayer);
   const barRef            = useRef(bar);
+  const dimsRef           = useRef(d);
   const touchActive       = useRef(false);
   const touchSrcRef       = useRef(null); // source point of current touch drag
 
   // Sync refs every render
-  movableRef.current      = movableSources;
-  onSelectRef.current     = onSelectPoint;
-  onDirectMoveRef.current = onDirectMove;
-  isMyTurnRef.current     = isMyTurn;
+  movableRef.current       = movableSources;
+  onSelectRef.current      = onSelectPoint;
+  onDirectMoveRef.current  = onDirectMove;
+  isMyTurnRef.current      = isMyTurn;
   currentPlayerRef.current = currentPlayer;
-  barRef.current          = bar;
+  barRef.current           = bar;
+  dimsRef.current          = d;
 
   // ── Touch listener setup (once on mount) ─────────────────────────────────
   useEffect(() => {
@@ -323,7 +329,6 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
     const fc = document.createElement('div');
     Object.assign(fc.style, {
       display: 'none', position: 'fixed',
-      width: `${CHECKER}px`, height: `${CHECKER}px`,
       borderRadius: '50%',
       transform: 'translate(-50%, -50%)',
       boxShadow: '0 6px 20px rgba(0,0,0,0.7)',
@@ -350,6 +355,9 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
     };
 
     const showFloat = (x, y, color) => {
+      const sz = dimsRef.current.CHECKER;
+      fc.style.width      = `${sz}px`;
+      fc.style.height     = `${sz}px`;
       fc.style.display    = 'block';
       fc.style.left       = `${x}px`;
       fc.style.top        = `${y}px`;
@@ -451,7 +459,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const ptProps = (pt) => ({
     key: pt, pointNumber: pt, color: ptColor(pt), checkers: getCheckers(pt),
     isSelected: selectedPoint === pt, isValidDest: isValidDest(pt), isMovable: isMovableSrc(pt),
-    onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onDrop: handleDrop,
+    onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onDrop: handleDrop, d,
   });
 
   const topRow    = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
@@ -491,6 +499,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             onClickBar={() => onSelectPoint('bar')}
             onDragStart={handleDragStart} onDrop={handleDrop}
             currentPlayer={currentPlayer} isMyTurn={isMyTurn}
+            d={d}
           />
           <div style={{ display: 'flex', gap: POINT_GAP }}>
             {topRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={true} />)}
@@ -500,6 +509,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             isValidDest={isBearOffDest && isMyTurn}
             onClick={() => isBearOffDest && onSelectPoint('bearoff')}
             onDrop={handleDrop}
+            d={d}
           />
         </div>
 
@@ -526,7 +536,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); handleDrop('bar'); }}
             style={{
-              width: BAR_W, height: POINT_H,
+              width: d.BAR_W, height: d.POINT_H,
               background: 'linear-gradient(180deg, #1a0f05 0%, #2a1a08 50%, #1a0f05 100%)',
               borderLeft: '3px solid #6b4a1a', borderRight: '3px solid #6b4a1a',
               flexShrink: 0,
@@ -535,7 +545,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
           <div style={{ display: 'flex', gap: POINT_GAP }}>
             {bottomRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={false} />)}
           </div>
-          <div style={{ width: BEAROFF_W, flexShrink: 0 }} />
+          <div style={{ width: d.BEAROFF_W, flexShrink: 0 }} />
         </div>
       </div>
 
