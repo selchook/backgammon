@@ -33,9 +33,12 @@ function Die({ value, used }) {
   );
 }
 
-function ChatPanel({ messages, onSend }) {
+function ChatPanel({ messages, onSend, portrait }) {
   const [text, setText] = useState('');
   const endRef = useRef(null);
+  // Landscape: bigger, more legible text on small screens
+  const msgFs  = portrait ? 12 : 15;
+  const inputFs = portrait ? 12 : 14;
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -48,11 +51,11 @@ function ChatPanel({ messages, onSend }) {
   return (
     <div style={{
       background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(180,140,60,0.2)',
-      borderRadius: 10, display: 'flex', flexDirection: 'column', height: 180, overflow: 'hidden',
+      borderRadius: 10, display: 'flex', flexDirection: 'column', height: portrait ? 180 : 160, overflow: 'hidden',
     }}>
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {messages.length === 0 && (
-          <div style={{ color: '#4a3820', fontSize: 11, fontFamily: 'Space Mono', textAlign: 'center', marginTop: 20 }}>
+          <div style={{ color: '#4a3820', fontSize: inputFs - 1, fontFamily: 'Space Mono', textAlign: 'center', marginTop: 16 }}>
             No messages yet
           </div>
         )}
@@ -60,26 +63,27 @@ function ChatPanel({ messages, onSend }) {
           <div key={i} style={{ display: 'flex', justifyContent: m.sender === 'me' ? 'flex-end' : 'flex-start' }}>
             <div style={{
               background: m.sender === 'me' ? 'linear-gradient(135deg, #8b6914, #c8a84b)' : 'rgba(255,255,255,0.08)',
-              color: m.sender === 'me' ? '#1a0f02' : '#d0c090',
-              padding: '4px 10px',
+              color: m.sender === 'me' ? '#1a0f02' : '#e8dca0',
+              padding: '5px 11px',
               borderRadius: m.sender === 'me' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-              fontSize: 12, fontFamily: 'Crimson Text, serif', maxWidth: '75%',
+              fontSize: msgFs, fontFamily: 'Crimson Text, serif', maxWidth: '80%',
+              lineHeight: 1.35,
             }}>{m.text}</div>
           </div>
         ))}
         <div ref={endRef} />
       </div>
-      <div style={{ display: 'flex', borderTop: '1px solid rgba(180,140,60,0.15)', padding: 6, gap: 6 }}>
+      <div style={{ display: 'flex', borderTop: '1px solid rgba(180,140,60,0.15)', padding: '6px 8px', gap: 6, alignItems: 'center' }}>
         <input
           value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           placeholder="Message..."
-          style={{ flex: 1, background: 'transparent', border: 'none', color: '#d0c090', fontSize: 12, fontFamily: 'Crimson Text, serif', outline: 'none' }}
+          style={{ flex: 1, background: 'transparent', border: 'none', color: '#e0d090', fontSize: inputFs, fontFamily: 'Crimson Text, serif', outline: 'none' }}
         />
         <button onClick={handleSend} style={{
           background: 'rgba(200,168,75,0.2)', border: '1px solid rgba(200,168,75,0.3)',
           borderRadius: 6, color: '#c8a84b', padding: '4px 10px', cursor: 'pointer',
-          fontSize: 12, fontFamily: 'Space Mono',
+          fontSize: inputFs, fontFamily: 'Space Mono', flexShrink: 0,
         }}>→</button>
       </div>
     </div>
@@ -238,7 +242,7 @@ export default function GameInfo({
       {/* Chat */}
       <div style={{ flex: portrait ? '1 1 100%' : 'unset' }}>
         <div style={labelStyle}>Chat</div>
-        <ChatPanel messages={chatMessages} onSend={onSendChat} />
+        <ChatPanel messages={chatMessages} onSend={onSendChat} portrait={portrait} />
       </div>
 
       <style>{`@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`}</style>
