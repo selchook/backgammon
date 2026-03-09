@@ -136,34 +136,57 @@ export default function GameInfo({
       width: portrait ? '100%' : 240,
       flexShrink: 0,
     }}>
-      {/* Player info */}
-      <div style={{ ...panelStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: portrait ? '1 1 200px' : 'unset' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={labelStyle}>You</div>
-          <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 13, fontWeight: 700 }}>{myLabel}</div>
-          <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 11, marginTop: 2 }}>
-            {myScore}/15 off {myBar > 0 ? `· ${myBar} bar` : ''}
-          </div>
-        </div>
-        <div style={{ color: '#4a3820', fontSize: 20 }}>vs</div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={labelStyle}>Opponent</div>
-          <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 13, fontWeight: 700 }}>{oppLabel}</div>
-          <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 11, marginTop: 2 }}>
-            {oppScore}/15 off {oppBar > 0 ? `· ${oppBar} bar` : ''}
-          </div>
-        </div>
-      </div>
-
-      {/* Turn indicator */}
+      {/* Merged Score + Turn panel */}
       <div style={{
-        ...panelStyle, textAlign: 'center',
-        borderColor: isMyTurn ? 'rgba(200,168,75,0.5)' : 'rgba(180,140,60,0.2)',
-        background: isMyTurn ? 'rgba(200,168,75,0.08)' : 'rgba(0,0,0,0.25)',
-        transition: 'all 0.3s ease',
-        flex: portrait ? '1 1 160px' : 'unset',
+        ...panelStyle,
+        borderColor: winner ? 'rgba(255,215,0,0.5)' : isMyTurn ? 'rgba(200,168,75,0.5)' : 'rgba(180,140,60,0.2)',
+        transition: 'border-color 0.3s ease',
+        flex: portrait ? '1 1 240px' : 'unset',
       }}>
-        <div style={{ color: winner ? '#ffd700' : isMyTurn ? '#c8a84b' : '#6a5028', fontFamily: 'Crimson Text, serif', fontSize: 15, fontStyle: 'italic', lineHeight: 1.4 }}>
+        {/* Player rows */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {/* You */}
+          <div style={{
+            flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8,
+            background: isMyTurn && !winner ? 'rgba(200,168,75,0.15)' : 'rgba(0,0,0,0.15)',
+            border: isMyTurn && !winner ? '1px solid rgba(200,168,75,0.45)' : '1px solid rgba(255,255,255,0.04)',
+            transition: 'all 0.3s ease',
+          }}>
+            <div style={{ ...labelStyle, marginBottom: 3 }}>
+              {isMyTurn && !winner ? '▶ You' : 'You'}
+            </div>
+            <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 12, fontWeight: 700 }}>{myLabel}</div>
+            <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 10, marginTop: 3 }}>{myScore}/15 off</div>
+            {myBar > 0 && <div style={{ color: '#ff9080', fontFamily: 'Space Mono', fontSize: 10 }}>{myBar} bar</div>}
+          </div>
+
+          {/* VS */}
+          <div style={{ display: 'flex', alignItems: 'center', color: '#4a3820', fontSize: 13, flexShrink: 0, paddingTop: 6 }}>vs</div>
+
+          {/* Opponent */}
+          <div style={{
+            flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8,
+            background: !isMyTurn && !winner ? 'rgba(200,168,75,0.15)' : 'rgba(0,0,0,0.15)',
+            border: !isMyTurn && !winner ? '1px solid rgba(200,168,75,0.45)' : '1px solid rgba(255,255,255,0.04)',
+            transition: 'all 0.3s ease',
+          }}>
+            <div style={{ ...labelStyle, marginBottom: 3 }}>
+              {!isMyTurn && !winner ? '▶ Opp' : 'Opp'}
+            </div>
+            <div style={{ color: '#e8d48c', fontFamily: 'Playfair Display', fontSize: 12, fontWeight: 700 }}>{oppLabel}</div>
+            <div style={{ color: '#c8a84b', fontFamily: 'Space Mono', fontSize: 10, marginTop: 3 }}>{oppScore}/15 off</div>
+            {oppBar > 0 && <div style={{ color: '#ff9080', fontFamily: 'Space Mono', fontSize: 10 }}>{oppBar} bar</div>}
+          </div>
+        </div>
+
+        {/* Turn status */}
+        <div style={{
+          marginTop: 10, paddingTop: 8,
+          borderTop: '1px solid rgba(180,140,60,0.15)',
+          textAlign: 'center',
+          color: winner ? '#ffd700' : isMyTurn ? '#c8a84b' : '#6a5028',
+          fontFamily: 'Crimson Text, serif', fontSize: 14, fontStyle: 'italic', lineHeight: 1.3,
+        }}>
           {turnText}
         </div>
       </div>

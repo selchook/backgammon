@@ -52,20 +52,23 @@ function useLayout() {
 }
 
 // ─── Fixed logo (top-left, always visible) ───────────────────────────────────
-function Logo() {
+function Logo({ portrait }) {
+  const fs = portrait ? 15 : 11;
+  const ts = portrait ? 17 : 12;
+  const ls = portrait ? 5  : 3;
   return (
     <div style={{
-      position: 'fixed', top: 8, left: 12, zIndex: 200,
-      display: 'flex', alignItems: 'center', gap: 5,
+      position: 'fixed', top: portrait ? 8 : 5, left: portrait ? 12 : 8, zIndex: 200,
+      display: 'flex', alignItems: 'center', gap: portrait ? 5 : 3,
       pointerEvents: 'none', userSelect: 'none',
     }}>
-      <span style={{ fontSize: 15, filter: 'drop-shadow(0 1px 4px rgba(200,168,75,0.6))' }}>🎲</span>
+      <span style={{ fontSize: fs, filter: 'drop-shadow(0 1px 4px rgba(200,168,75,0.6))' }}>🎲</span>
       <span style={{
-        fontSize: 17, fontWeight: 900, color: '#e8d48c',
-        letterSpacing: 5, fontFamily: 'Playfair Display, serif',
+        fontSize: ts, fontWeight: 900, color: '#e8d48c',
+        letterSpacing: ls, fontFamily: 'Playfair Display, serif',
         textShadow: '0 1px 8px rgba(200,168,75,0.4)',
       }}>TAVLA</span>
-      <span style={{ fontSize: 15, filter: 'drop-shadow(0 1px 4px rgba(200,168,75,0.6))', transform: 'scaleX(-1)' }}>🎲</span>
+      <span style={{ fontSize: fs, filter: 'drop-shadow(0 1px 4px rgba(200,168,75,0.6))', transform: 'scaleX(-1)' }}>🎲</span>
     </div>
   );
 }
@@ -145,7 +148,7 @@ export default function App() {
       overflowX: 'hidden',
       fontFamily: 'Playfair Display, serif',
     }}>
-      <Logo />
+      <Logo portrait={portrait} />
       <FullscreenBtn />
 
       {/* Game area — zoom scales whole layout cleanly */}
@@ -156,7 +159,6 @@ export default function App() {
         alignItems: portrait ? 'center' : 'flex-start',
         zoom: scale,
         flexShrink: 0,
-        // In portrait, add top margin so content clears the fixed logo
         marginTop: portrait ? LOGO_H : 0,
       }}>
         <Board
