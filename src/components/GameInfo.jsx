@@ -12,9 +12,9 @@ function Die({ value, used }) {
   };
   return (
     <div style={{
-      width: 52, height: 52,
+      width: 44, height: 44,
       background: used ? 'rgba(30,30,30,0.5)' : 'linear-gradient(135deg, #f5f0e0, #e8dfc0)',
-      borderRadius: 10,
+      borderRadius: 9,
       border: used ? '2px solid #333' : '2px solid #c8b870',
       position: 'relative',
       boxShadow: used ? 'none' : '0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8)',
@@ -125,6 +125,7 @@ export default function GameInfo({
   const panelStyle = {
     background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(180,140,60,0.2)',
     borderRadius: 10, padding: '12px 14px',
+    boxSizing: 'border-box', overflow: 'hidden',
   };
 
   return (
@@ -134,7 +135,10 @@ export default function GameInfo({
       flexWrap: portrait ? 'wrap' : 'nowrap',
       gap: 14,
       width: portrait ? '100%' : 240,
+      maxWidth: portrait ? '100%' : 240,
       flexShrink: 0,
+      boxSizing: 'border-box',
+      minWidth: 0,
     }}>
       {/* Merged Score + Turn panel */}
       <div style={{
@@ -194,7 +198,7 @@ export default function GameInfo({
       {/* Dice */}
       <div style={{ ...panelStyle, flex: portrait ? '1 1 200px' : 'unset' }}>
         <div style={labelStyle}>Dice</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 60, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 52, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
           {dice.length === 0
             ? <div style={{ color: '#3a2810', fontFamily: 'Space Mono', fontSize: 11 }}>—</div>
             : dice.map((d, i) => <Die key={i} value={d} used={false} />)
