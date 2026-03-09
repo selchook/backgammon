@@ -6,15 +6,15 @@ import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 
 // Board natural pixel dimensions — must match Board.jsx P / L constants
-const PORTRAIT_BW  = 586;  // portrait board width
+const PORTRAIT_BW  = 590;  // portrait board width
 const PORTRAIT_BH  = 672;  // portrait board height
-const LANDSCAPE_BW = 802;  // landscape board width  (W >> H)
+const LANDSCAPE_BW = 806;  // landscape board width  (W >> H)
 const LANDSCAPE_BH = 456;  // landscape board height
 const SIDEBAR_W    = 240;
 const GAP          = 20;
 const LOGO_H       = 36;
 // Total widths for scale calculation (board + gap + sidebar)
-const LANDSCAPE_TW = LANDSCAPE_BW + GAP + SIDEBAR_W;  // 1062
+const LANDSCAPE_TW = LANDSCAPE_BW + GAP + SIDEBAR_W;  // 1066
 
 function useLayout() {
   const compute = () => {

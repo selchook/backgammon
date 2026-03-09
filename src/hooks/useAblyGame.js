@@ -276,6 +276,29 @@ export function useAblyGame() {
     );
 
     if (!match) {
+      // Try combined two-dice move (drag to blue-ring destination)
+      if (typeof to === 'number' && gs.dice.length === 2) {
+        for (const firstMove of moves) {
+          if (firstMove.to < 1 || firstMove.to > 24) continue;
+          const mid = applyMove(gs, from, firstMove.to, firstMove.die);
+          if (mid.phase !== 'moving' || mid.currentPlayer !== player) continue;
+          const secondMoves = getValidMoves(mid, firstMove.to, player);
+          const secondMatch = secondMoves.find(m => m.to === to);
+          if (secondMatch) {
+            const isHit = gs.points[to]?.color === opponent(player) && gs.points[to].count === 1;
+            isHit ? playCheckerHit() : playCheckerMove();
+            moveHistory.current.push(gs);
+            const final = applyMove(mid, firstMove.to, secondMatch.to, secondMatch.die);
+            gameStateRef.current = final;
+            setGameState(final);
+            setSelectedPoint(null);
+            setValidDestinations([]);
+            publishState(final);
+            if (final.phase === 'ended') setStatus('ended');
+            return;
+          }
+        }
+      }
       // Invalid drop target — select the source so the player can tap a dest
       if (moves.length > 0) {
         setSelectedPoint(from);
