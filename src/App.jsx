@@ -123,8 +123,9 @@ function FullscreenBtn() {
 export default function App() {
   const {
     gameState, playerColor, roomId, status,
-    selectedPoint, validDestinations, movableSources,
+    selectedPoint, validDestinations, movableSources, allValidDests,
     opponentConnected, chatMessages, isMyTurn,
+    canUndo, handleUndo,
     createRoom, joinRoom, handleRoll, handleSelectPoint, handleDirectMove,
     sendChat, handleRematch,
   } = useAblyGame();
@@ -172,6 +173,7 @@ export default function App() {
           selectedPoint={selectedPoint}
           validDestinations={validDestinations}
           movableSources={movableSources}
+          allValidDests={allValidDests}
           playerColor={playerColor}
           isMyTurn={isMyTurn}
           onSelectPoint={handleSelectPoint}
@@ -189,6 +191,8 @@ export default function App() {
           opponentConnected={opponentConnected}
           portrait={portrait}
           boardH={portrait ? undefined : LANDSCAPE_BH}
+          canUndo={canUndo}
+          onUndo={handleUndo}
         />
       </div>
     </div>

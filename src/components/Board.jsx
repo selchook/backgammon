@@ -289,11 +289,12 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }
 }
 
 // ─── MAIN BOARD ──────────────────────────────────────────────────────────────
-export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint, onDirectMove, landscape }) {
+export default function Board({ gameState, selectedPoint, validDestinations, movableSources, allValidDests = [], playerColor, isMyTurn, onSelectPoint, onDirectMove, landscape }) {
   if (!gameState) return null;
 
   const { points, bar, borneOff, currentPlayer } = gameState;
   const d = landscape ? L : P;
+  const flip = playerColor === 'black'; // black sees their home at bottom
 
   // ── Desktop drag ──────────────────────────────────────────────────────────
   const dropOccurred = useRef(false);
@@ -439,9 +440,13 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const getCheckers   = (pt) => { const p = points[pt]; return (!p || !p.color || p.count === 0) ? [] : Array(p.count).fill(p.color); };
-  const isValidDest   = (pt) => validDestinations.some(d => d.to === pt);
+  // When a piece is selected show its specific dests; otherwise show all reachable squares
+  const effectiveDests = selectedPoint !== null ? new Set(validDestinations.map(d => d.to)) : new Set(allValidDests);
+  const isValidDest   = (pt) => effectiveDests.has(pt);
   const isMovableSrc  = (pt) => movableSources.includes(pt);
-  const isBearOffDest = validDestinations.some(d => d.to === 0 || d.to === 25);
+  const isBearOffDest = selectedPoint !== null
+    ? validDestinations.some(d => d.to === 0 || d.to === 25)
+    : allValidDests.includes(0) || allValidDests.includes(25);
   const ptColor       = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
@@ -462,8 +467,8 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
     onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onDrop: handleDrop, d,
   });
 
-  const topRow    = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
-  const bottomRow = [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1];
+  const topRow    = flip ? [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1] : [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+  const bottomRow = flip ? [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] : [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1];
 
   return (
     <div

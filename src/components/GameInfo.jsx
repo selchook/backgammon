@@ -92,6 +92,7 @@ export default function GameInfo({
   gameState, playerColor, isMyTurn, onRoll,
   chatMessages, onSendChat, onRematch,
   opponentConnected, portrait, boardH,
+  canUndo, onUndo,
 }) {
   if (!gameState) return null;
   const { dice, phase, currentPlayer, winner, borneOff, bar } = gameState;
@@ -224,7 +225,16 @@ export default function GameInfo({
             🎲 Roll Dice
           </button>
         )}
-        {phase === 'moving' && isMyTurn && (
+        {canUndo && (
+          <button onClick={onUndo} style={{
+            marginTop: 8, width: '100%', padding: '8px',
+            background: 'rgba(80,50,10,0.5)',
+            border: '1px solid rgba(200,168,75,0.3)', borderRadius: 8,
+            color: '#c8a84b', fontFamily: 'Space Mono',
+            fontSize: 12, cursor: 'pointer', letterSpacing: 1,
+          }}>↩ Undo Move</button>
+        )}
+        {phase === 'moving' && isMyTurn && !canUndo && (
           <div style={{ marginTop: 8, color: '#7a6030', fontSize: 11, fontFamily: 'Space Mono', textAlign: 'center' }}>
             Click or drag a checker to move
           </div>

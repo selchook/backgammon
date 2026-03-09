@@ -25,6 +25,7 @@ export function useAblyGame() {
   const clientId = useRef(generateClientId());
   const playerColorRef = useRef(null);
   const gameStateRef = useRef(null);
+  const moveHistory = useRef([]); // states before each move this turn
 
   // Keep refs in sync
   useEffect(() => { playerColorRef.current = playerColor; }, [playerColor]);
@@ -141,6 +142,7 @@ export function useAblyGame() {
     if (!gs || gs.phase !== 'rolling') return;
     if (gs.currentPlayer !== playerColorRef.current) return;
 
+    moveHistory.current = []; // new turn — clear undo history
     const dice = rollDice();
     const newState = { ...gs, dice, phase: 'moving' };
 
@@ -170,6 +172,13 @@ export function useAblyGame() {
     if (!gs || gs.phase !== 'moving') return;
     if (gs.currentPlayer !== playerColorRef.current) return;
 
+    // Tap same selected piece → deselect
+    if (point === selectedPoint) {
+      setSelectedPoint(null);
+      setValidDestinations([]);
+      return;
+    }
+
     // If clicking a valid destination → make the move
     if (selectedPoint !== null && validDestinations.some(d => d.to === point || (point === 'bearoff' && (d.to === 0 || d.to === 25)))) {
       const matchDest = validDestinations.find(d => {
@@ -178,6 +187,7 @@ export function useAblyGame() {
       });
       if (!matchDest) return;
 
+      moveHistory.current.push(gs); // save state before move for undo
       const newState = applyMove(gs, selectedPoint, matchDest.to, matchDest.die);
       gameStateRef.current = newState;
       setGameState(newState);
@@ -243,6 +253,7 @@ export function useAblyGame() {
       return;
     }
 
+    moveHistory.current.push(gs); // save state before move for undo
     const newState = applyMove(gs, from, match.to, match.die);
     gameStateRef.current = newState;
     setGameState(newState);
@@ -250,6 +261,17 @@ export function useAblyGame() {
     setValidDestinations([]);
     publishState(newState);
     if (newState.phase === 'ended') setStatus('ended');
+  }, [publishState]);
+
+  // ─── UNDO MOVE ────────────────────────────────────────────────────────────
+  const handleUndo = useCallback(() => {
+    if (moveHistory.current.length === 0) return;
+    const prev = moveHistory.current.pop();
+    gameStateRef.current = prev;
+    setGameState(prev);
+    setSelectedPoint(null);
+    setValidDestinations([]);
+    publishState(prev);
   }, [publishState]);
 
   // ─── SEND CHAT ────────────────────────────────────────────────────────────
@@ -276,8 +298,14 @@ export function useAblyGame() {
     ? getMovableSources(gameState, playerColor)
     : [];
 
+  // All reachable destinations from any movable piece (shown before piece selection)
+  const allValidDests = gameState && gameState.phase === 'moving' && gameState.currentPlayer === playerColor
+    ? [...new Set(movableSources.flatMap(src => getValidMoves(gameState, src, playerColor).map(m => m.to)))]
+    : [];
+
   const isMyTurn = gameState?.currentPlayer === playerColor;
   const bearingOff = gameState ? canBearOff(gameState, playerColor) : false;
+  const canUndo = moveHistory.current.length > 0 && gameState?.phase === 'moving' && isMyTurn;
 
   return {
     gameState,
@@ -287,16 +315,19 @@ export function useAblyGame() {
     selectedPoint,
     validDestinations,
     movableSources,
+    allValidDests,
     opponentConnected,
     chatMessages,
     lastEvent,
     isMyTurn,
     bearingOff,
+    canUndo,
     createRoom,
     joinRoom,
     handleRoll,
     handleSelectPoint,
     handleDirectMove,
+    handleUndo,
     sendChat,
     handleRematch,
   };
