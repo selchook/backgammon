@@ -1,38 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAblyGame } from './hooks/useAblyGame';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 
-// Approximate natural dimensions of the game layout
-const BOARD_NAT_W   = 830;  // board width in px
-const SIDEBAR_W     = 260;  // GameInfo width in px
-const LAYOUT_GAP    = 20;
-const LANDSCAPE_NAT_W = BOARD_NAT_W + SIDEBAR_W + LAYOUT_GAP; // ~1110
-const LANDSCAPE_NAT_H = 520;  // board + center strip height
-const PORTRAIT_NAT_W  = BOARD_NAT_W;
+// Precise board dimensions (derived from Board.jsx constants):
+//   12 pts × 54px + 11 gaps × 2px + bar 60px + bearoff 55px + 3 inter-gaps × 2px
+//   + felt padding 12px + outer padding 16px + border 6px = 823px wide
+//   top 180 + centre 30 + bottom 180 + margins 8 + felt pad 16 + outer pad 32 + border 6 = 452px tall
+const BOARD_W = 823;
+const BOARD_H = 452;
+const SIDEBAR_W = 240;
+const GAP = 20;
+const LANDSCAPE_W = BOARD_W + GAP + SIDEBAR_W; // 1083
+const LANDSCAPE_H = BOARD_H;
 
-function useResponsive() {
-  const calc = () => {
+function useScale() {
+  const compute = () => {
     const portrait = window.innerHeight > window.innerWidth;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const HEADER_H = 48;  // title bar height
+    const LABEL_H  = 22;  // orientation label at bottom
+    const padding  = portrait ? 4 : 8;
+
     let scale;
     if (portrait) {
-      scale = Math.min(1, (vw - 8) / PORTRAIT_NAT_W);
+      // Fill width; vertical scroll handles the stacked GameInfo
+      scale = (vw - padding * 2) / BOARD_W;
     } else {
-      const sw = Math.min(1, (vw - 16) / LANDSCAPE_NAT_W);
-      const sh = Math.min(1, (vh - 90) / LANDSCAPE_NAT_H);
+      // Fill both axes — remove the cap so board expands on large screens too
+      const sw = (vw - padding * 2) / LANDSCAPE_W;
+      const sh = (vh - HEADER_H - LABEL_H - padding * 2) / LANDSCAPE_H;
       scale = Math.min(sw, sh);
     }
-    return { portrait, scale: Math.max(0.3, scale) };
+    return { portrait, scale: Math.min(2, Math.max(0.3, scale)) };
   };
 
-  const [state, setState] = useState(calc);
+  const [state, setState] = useState(compute);
 
   useEffect(() => {
-    const update = () => setState(calc());
+    const update = () => setState(compute());
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', () => setTimeout(update, 150));
     return () => window.removeEventListener('resize', update);
@@ -43,48 +52,23 @@ function useResponsive() {
 
 export default function App() {
   const {
-    gameState,
-    playerColor,
-    roomId,
-    status,
-    selectedPoint,
-    validDestinations,
-    movableSources,
-    opponentConnected,
-    chatMessages,
-    isMyTurn,
-    createRoom,
-    joinRoom,
-    handleRoll,
-    handleSelectPoint,
-    sendChat,
-    handleRematch,
+    gameState, playerColor, roomId, status,
+    selectedPoint, validDestinations, movableSources,
+    opponentConnected, chatMessages, isMyTurn,
+    createRoom, joinRoom, handleRoll, handleSelectPoint,
+    sendChat, handleRematch,
   } = useAblyGame();
 
-  const { portrait, scale } = useResponsive();
+  const { portrait, scale } = useScale();
 
-  // Auto-join from URL param
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
-    if (room && status === 'idle') {
-      joinRoom(room.toUpperCase());
-    }
+    if (room && status === 'idle') joinRoom(room.toUpperCase());
   }, []);
 
-  if (status === 'idle') {
-    return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />;
-  }
-
-  if (status === 'waiting') {
-    return (
-      <WaitingRoom
-        roomId={roomId}
-        playerColor={playerColor}
-        onBack={() => window.location.reload()}
-      />
-    );
-  }
+  if (status === 'idle')    return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />;
+  if (status === 'waiting') return <WaitingRoom roomId={roomId} playerColor={playerColor} onBack={() => window.location.reload()} />;
 
   return (
     <div style={{
@@ -94,37 +78,34 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: portrait ? 'flex-start' : 'center',
-      padding: portrait ? '8px 4px' : '12px',
+      padding: portrait ? '4px' : '8px',
       fontFamily: 'Playfair Display, serif',
-      overflow: 'auto',
+      overflow: portrait ? 'auto' : 'hidden',
     }}>
       {/* Header */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: portrait ? 8 : 16,
+        display: 'flex', alignItems: 'center', gap: 10,
+        marginBottom: portrait ? 6 : 10,
         marginTop: portrait ? 4 : 0,
+        flexShrink: 0,
       }}>
-        <div style={{ fontSize: portrait ? 20 : 28, filter: 'drop-shadow(0 2px 8px rgba(200,168,75,0.5))' }}>🎲</div>
+        <div style={{ fontSize: 22, filter: 'drop-shadow(0 2px 8px rgba(200,168,75,0.5))' }}>🎲</div>
         <h1 style={{
-          margin: 0,
-          fontSize: portrait ? 22 : 32,
-          fontWeight: 900,
-          color: '#e8d48c',
-          letterSpacing: 6,
+          margin: 0, fontSize: 26, fontWeight: 900,
+          color: '#e8d48c', letterSpacing: 6,
           textShadow: '0 2px 16px rgba(200,168,75,0.3)',
         }}>TAVLA</h1>
-        <div style={{ fontSize: portrait ? 20 : 28, filter: 'drop-shadow(0 2px 8px rgba(200,168,75,0.5))', transform: 'scaleX(-1)' }}>🎲</div>
+        <div style={{ fontSize: 22, filter: 'drop-shadow(0 2px 8px rgba(200,168,75,0.5))', transform: 'scaleX(-1)' }}>🎲</div>
       </div>
 
-      {/* Main game area — zoom scales layout cleanly (no dead-space issue) */}
+      {/* Game area — zoom scales without layout dead-space issues */}
       <div style={{
         display: 'flex',
         flexDirection: portrait ? 'column' : 'row',
-        gap: portrait ? 12 : LAYOUT_GAP,
+        gap: portrait ? 10 : GAP,
         alignItems: portrait ? 'center' : 'flex-start',
         zoom: scale,
+        flexShrink: 0,
       }}>
         <Board
           gameState={gameState}
@@ -135,7 +116,6 @@ export default function App() {
           isMyTurn={isMyTurn}
           onSelectPoint={handleSelectPoint}
         />
-
         <GameInfo
           gameState={gameState}
           playerColor={playerColor}
@@ -150,13 +130,11 @@ export default function App() {
         />
       </div>
 
-      {/* Player orientation label */}
+      {/* Orientation label */}
       <div style={{
-        marginTop: 8,
-        color: '#4a3820',
-        fontSize: 10,
-        fontFamily: 'Space Mono',
-        letterSpacing: 2,
+        marginTop: 6, flexShrink: 0,
+        color: '#4a3820', fontSize: 10,
+        fontFamily: 'Space Mono', letterSpacing: 2,
       }}>
         You are playing as {playerColor === 'white' ? '⬜ CREAM (moves right→left)' : '🟥 RED (moves left→right)'}
       </div>

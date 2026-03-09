@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { playCheckerMove, playCheckerHit } from '../utils/sounds';
+import { useRef } from 'react';
+import { playCheckerMove } from '../utils/sounds';
 
 // ─── POINT TRIANGLE ──────────────────────────────────────────────────────────
 function PointTriangle({
@@ -9,6 +9,7 @@ function PointTriangle({
 }) {
   const w = 54;
   const h = 180;
+  const topCheckerRef = useRef(null);
 
   const triColor = color === 'dark'
     ? 'rgba(120, 60, 20, 0.9)'
@@ -17,7 +18,6 @@ function PointTriangle({
   const clipTop    = `polygon(0% 0%, 100% 0%, 50% 100%)`;
   const clipBottom = `polygon(50% 0%, 0% 100%, 100% 100%)`;
 
-  // Highlight colours — much more visible now
   const overlayColor = isSelected  ? 'rgba(255,215,0,0.45)'
                      : isValidDest ? 'rgba(40,210,100,0.55)'
                      : isMovable   ? 'rgba(255,200,50,0.28)'
@@ -39,51 +39,50 @@ function PointTriangle({
         position: 'relative',
         width: w,
         height: h,
-        cursor: isValidDest ? 'copy' : isMovable ? 'grab' : 'pointer',
+        cursor: isValidDest ? 'copy' : 'pointer',
         flexShrink: 0,
       }}
     >
-      {/* Triangle */}
+      {/* Triangle shape */}
       <div style={{
         position: 'absolute',
-        top: 0, left: 0,
-        width: '100%',
-        height: '100%',
+        top: 0, left: 0, width: '100%', height: '100%',
         clipPath: isTop ? clipTop : clipBottom,
         background: triColor,
-        filter: hasHighlight ? `drop-shadow(0 0 10px ${glowColor}) drop-shadow(0 0 4px ${glowColor})` : 'none',
+        filter: hasHighlight
+          ? `drop-shadow(0 0 10px ${glowColor}) drop-shadow(0 0 4px ${glowColor})`
+          : 'none',
         transition: 'filter 0.2s ease',
       }} />
 
-      {/* Highlight overlay on the triangle shape */}
+      {/* Colour overlay on triangle */}
       {overlayColor && (
         <div style={{
           position: 'absolute',
-          top: 0, left: 0,
-          width: '100%',
-          height: '100%',
+          top: 0, left: 0, width: '100%', height: '100%',
           clipPath: isTop ? clipTop : clipBottom,
           background: overlayColor,
           animation: isValidDest ? 'pulse-dest 1s ease-in-out infinite' : undefined,
+          pointerEvents: 'none',
         }} />
       )}
 
-      {/* Valid dest: dark border ring to make it unmissable */}
+      {/* Ring marker at tip for valid destinations — impossible to miss */}
       {isValidDest && (
         <div style={{
           position: 'absolute',
-          top: isTop ? 0 : 'auto',
-          bottom: isTop ? 'auto' : 0,
+          top: isTop ? 'auto' : 2,
+          bottom: isTop ? 2 : 'auto',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 40,
-          height: 40,
+          width: 42,
+          height: 42,
           borderRadius: '50%',
           border: '3px solid #00e87a',
-          boxShadow: '0 0 12px #00e87a, inset 0 0 8px rgba(0,232,122,0.3)',
-          animation: 'pulse-ring 1s ease-in-out infinite',
+          boxShadow: '0 0 14px #00e87a, inset 0 0 8px rgba(0,232,122,0.25)',
+          animation: 'pulse-ring 0.9s ease-in-out infinite',
           pointerEvents: 'none',
-          zIndex: 20,
+          zIndex: 25,
         }} />
       )}
 
@@ -98,44 +97,54 @@ function PointTriangle({
         fontFamily: 'Space Mono, monospace',
         userSelect: 'none',
         opacity: 0.7,
+        pointerEvents: 'none',
       }}>{pointNumber}</div>
 
-      {/* Checkers */}
-      <div
-        draggable={isMovable && checkers.length > 0}
-        onDragStart={isMovable && checkers.length > 0
-          ? (e) => { e.stopPropagation(); onDragStart && onDragStart(pointNumber); }
-          : undefined}
-        style={{
-          position: 'absolute',
-          top: isTop ? 0 : 'auto',
-          bottom: isTop ? 'auto' : 0,
-          left: 0,
-          right: 0,
-          height: '100%',
-          cursor: isMovable && checkers.length > 0 ? 'grab' : 'default',
-        }}
-      >
-        {checkers.map((c, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            width: 38,
-            height: 38,
-            borderRadius: '50%',
-            [isTop ? 'top' : 'bottom']: i * 22,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: c === 'white'
-              ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
-              : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
-            boxShadow: c === 'white'
-              ? '0 3px 8px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.6)'
-              : '0 3px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,100,100,0.3)',
-            border: c === 'white' ? '2px solid #a09060' : '2px solid #6b1010',
-            zIndex: 10 + i,
-            pointerEvents: 'none',
-          }} />
-        ))}
+      {/* Checkers — only the TOP checker of the stack is draggable */}
+      <div style={{
+        position: 'absolute',
+        top: isTop ? 0 : 'auto',
+        bottom: isTop ? 'auto' : 0,
+        left: 0, right: 0, height: '100%',
+      }}>
+        {checkers.map((c, i) => {
+          const isTopChecker = i === checkers.length - 1;
+          const canDrag = isMovable && isTopChecker;
+
+          return (
+            <div
+              key={i}
+              ref={isTopChecker ? topCheckerRef : null}
+              draggable={canDrag}
+              onDragStart={canDrag ? (e) => {
+                // Use just this checker as drag image (centred on pointer)
+                if (topCheckerRef.current) {
+                  e.dataTransfer.setDragImage(topCheckerRef.current, 19, 19);
+                }
+                e.stopPropagation();
+                onDragStart && onDragStart(pointNumber);
+              } : undefined}
+              style={{
+                position: 'absolute',
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                [isTop ? 'top' : 'bottom']: i * 22,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: c === 'white'
+                  ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
+                  : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
+                boxShadow: c === 'white'
+                  ? '0 3px 8px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.6)'
+                  : '0 3px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,100,100,0.3)',
+                border: c === 'white' ? '2px solid #a09060' : '2px solid #6b1010',
+                zIndex: 10 + i,
+                cursor: canDrag ? 'grab' : 'default',
+              }}
+            />
+          );
+        })}
 
         {/* Count badge when > 5 */}
         {checkers.length > 5 && (
@@ -161,12 +170,22 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
-function Bar({ whiteCount, blackCount, selectedPoint, validDestinations, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn }) {
-  const isSelected  = selectedPoint === 'bar';
-  const myColor     = currentPlayer;
-  const myCount     = myColor === 'white' ? whiteCount : blackCount;
-  const isMovable   = isMyTurn && myCount > 0;
-  const isValidDest = validDestinations.some(d => d.to === 'bar');
+function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn }) {
+  const isSelected = selectedPoint === 'bar';
+  const myColor    = currentPlayer;
+  const myCount    = myColor === 'white' ? whiteCount : blackCount;
+  const isMovable  = isMyTurn && myCount > 0;
+  const topBlackRef = useRef(null);
+  const topWhiteRef = useRef(null);
+
+  const checkerStyle = (color) => ({
+    width: 34, height: 34, borderRadius: '50%',
+    background: color === 'white'
+      ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
+      : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
+    border: color === 'white' ? '2px solid #a09060' : '2px solid #6b1010',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+  });
 
   return (
     <div
@@ -192,38 +211,50 @@ function Bar({ whiteCount, blackCount, selectedPoint, validDestinations, onClick
         zIndex: 5,
       }}
     >
-      <div
-        draggable={isMovable}
-        onDragStart={isMovable ? (e) => { e.stopPropagation(); onDragStart && onDragStart('bar'); } : undefined}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-      >
-        {Array.from({ length: blackCount }).map((_, i) => (
-          <div key={i} style={{
-            width: 34, height: 34, borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
-            border: '2px solid #6b1010',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-            pointerEvents: 'none',
-          }} />
-        ))}
+      {/* Black checkers — top one is draggable if it's my color */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {Array.from({ length: blackCount }).map((_, i) => {
+          const isTopChecker = i === blackCount - 1;
+          const canDrag = isMovable && myColor === 'black' && isTopChecker;
+          return (
+            <div
+              key={i}
+              ref={isTopChecker ? topBlackRef : null}
+              draggable={canDrag}
+              onDragStart={canDrag ? (e) => {
+                if (topBlackRef.current) e.dataTransfer.setDragImage(topBlackRef.current, 17, 17);
+                e.stopPropagation();
+                onDragStart && onDragStart('bar');
+              } : undefined}
+              style={{ ...checkerStyle('black'), cursor: canDrag ? 'grab' : 'default' }}
+            />
+          );
+        })}
       </div>
+
       {(blackCount > 0 || whiteCount > 0) && (
         <div style={{ width: 40, height: 2, background: '#6b4a1a', opacity: 0.5 }} />
       )}
-      <div
-        draggable={isMovable}
-        onDragStart={isMovable ? (e) => { e.stopPropagation(); onDragStart && onDragStart('bar'); } : undefined}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-      >
-        {Array.from({ length: whiteCount }).map((_, i) => (
-          <div key={i} style={{
-            width: 34, height: 34, borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)',
-            border: '2px solid #a09060',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-            pointerEvents: 'none',
-          }} />
-        ))}
+
+      {/* White checkers */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {Array.from({ length: whiteCount }).map((_, i) => {
+          const isTopChecker = i === whiteCount - 1;
+          const canDrag = isMovable && myColor === 'white' && isTopChecker;
+          return (
+            <div
+              key={i}
+              ref={isTopChecker ? topWhiteRef : null}
+              draggable={canDrag}
+              onDragStart={canDrag ? (e) => {
+                if (topWhiteRef.current) e.dataTransfer.setDragImage(topWhiteRef.current, 17, 17);
+                e.stopPropagation();
+                onDragStart && onDragStart('bar');
+              } : undefined}
+              style={{ ...checkerStyle('white'), cursor: canDrag ? 'grab' : 'default' }}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -251,12 +282,9 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
           : 'none',
         transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
         overflow: 'hidden',
-        gap: 0,
         flexShrink: 0,
-        animation: isValidDest ? 'pulse-ring 1s ease-in-out infinite' : undefined,
       }}
     >
-      {/* Black borne off (top) */}
       <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4, gap: 2 }}>
         {Array.from({ length: Math.min(blackCount, 8) }).map((_, i) => (
           <div key={i} style={{ width: 28, height: 10, borderRadius: 5, background: 'radial-gradient(#c0392b, #5c0f0f)', border: '1px solid #6b1010', flexShrink: 0 }} />
@@ -264,7 +292,6 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
         {blackCount > 8 && <div style={{ color: '#ffd700', fontSize: 11, fontFamily: 'Space Mono' }}>{blackCount}</div>}
       </div>
       <div style={{ width: '80%', height: 1, background: '#3a5a2a' }} />
-      {/* White borne off (bottom) */}
       <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', justifyContent: 'flex-start', paddingBottom: 4, gap: 2 }}>
         {Array.from({ length: Math.min(whiteCount, 8) }).map((_, i) => (
           <div key={i} style={{ width: 28, height: 10, borderRadius: 5, background: 'radial-gradient(#f5f0e8, #b8a87c)', border: '1px solid #a09060', flexShrink: 0 }} />
@@ -276,7 +303,7 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop }) {
 }
 
 // ─── MAIN BOARD ──────────────────────────────────────────────────────────────
-export default function Board({ gameState, selectedPoint, validDestinations, movableSources, playerColor, isMyTurn, onSelectPoint }) {
+export default function Board({ gameState, selectedPoint, validDestinations, movableSources, isMyTurn, onSelectPoint }) {
   if (!gameState) return null;
 
   const { points, bar, borneOff, currentPlayer } = gameState;
@@ -285,20 +312,13 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const topRow    = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
   const bottomRow = [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1];
 
-  const getCheckers = (pt) => {
-    const p = points[pt];
-    if (!p || !p.color || p.count === 0) return [];
-    return Array(p.count).fill(p.color);
-  };
-
+  const getCheckers   = (pt) => { const p = points[pt]; return (!p || !p.color || p.count === 0) ? [] : Array(p.count).fill(p.color); };
   const isValidDest   = (pt) => validDestinations.some(d => d.to === pt);
   const isMovableSrc  = (pt) => movableSources.includes(pt);
   const isBearOffDest = validDestinations.some(d => d.to === 0 || d.to === 25);
   const pointColor    = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
+  const POINT_GAP     = 2;
 
-  const POINT_GAP = 2;
-
-  // ─── Drag handlers ───
   const handleDragStart = (pt) => {
     dropOccurred.current = false;
     onSelectPoint(pt);
@@ -306,22 +326,30 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
   const handleDrop = (pt) => {
     dropOccurred.current = true;
-    const destIsValid = pt === 'bearoff'
+    const valid = pt === 'bearoff'
       ? validDestinations.some(d => d.to === 0 || d.to === 25)
       : validDestinations.some(d => d.to === pt);
-    if (destIsValid) {
-      playCheckerMove();
-    }
-    onSelectPoint(pt === 'bearoff' ? pt : pt);
+    if (valid) playCheckerMove();
+    onSelectPoint(pt);
   };
 
   const handleDragEnd = () => {
-    if (!dropOccurred.current) {
-      // Dropped on invalid area — deselect
-      onSelectPoint(null);
-    }
+    if (!dropOccurred.current) onSelectPoint(null);
     dropOccurred.current = false;
   };
+
+  const ptProps = (pt) => ({
+    key: pt,
+    pointNumber: pt,
+    color: pointColor(pt),
+    checkers: getCheckers(pt),
+    isSelected: selectedPoint === pt,
+    isValidDest: isValidDest(pt),
+    isMovable: isMovableSrc(pt),
+    onClick: () => onSelectPoint(pt),
+    onDragStart: handleDragStart,
+    onDrop: handleDrop,
+  });
 
   return (
     <div
@@ -334,161 +362,73 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
         padding: '16px 8px',
         boxShadow: '0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,220,100,0.1)',
         border: '3px solid #6b4a1a',
-        position: 'relative',
-        gap: 0,
       }}
     >
-      {/* Board felt area */}
       <div style={{
         background: 'linear-gradient(180deg, #1a4d2e 0%, #153d24 100%)',
         borderRadius: 8,
         padding: '8px 6px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 0,
         border: '2px solid #0d2a18',
         boxShadow: 'inset 0 2px 12px rgba(0,0,0,0.4)',
       }}>
 
-        {/* Top half row (points 13-24) */}
+        {/* Top row: 13-24 */}
         <div style={{ display: 'flex', flexDirection: 'row', gap: POINT_GAP, alignItems: 'flex-start', marginBottom: 4 }}>
-          {/* Left half: 13-18 */}
           <div style={{ display: 'flex', gap: POINT_GAP }}>
-            {topRow.slice(0, 6).map(pt => (
-              <PointTriangle
-                key={pt}
-                pointNumber={pt}
-                isTop={true}
-                color={pointColor(pt)}
-                checkers={getCheckers(pt)}
-                isSelected={selectedPoint === pt}
-                isValidDest={isValidDest(pt)}
-                isMovable={isMovableSrc(pt)}
-                onClick={() => onSelectPoint(pt)}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-              />
-            ))}
+            {topRow.slice(0, 6).map(pt => <PointTriangle {...ptProps(pt)} isTop={true} />)}
           </div>
-
-          {/* Bar */}
           <Bar
-            whiteCount={bar.white}
-            blackCount={bar.black}
+            whiteCount={bar.white} blackCount={bar.black}
             selectedPoint={selectedPoint}
-            validDestinations={validDestinations}
             onClickBar={() => onSelectPoint('bar')}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            currentPlayer={currentPlayer}
-            isMyTurn={isMyTurn}
+            onDragStart={handleDragStart} onDrop={handleDrop}
+            currentPlayer={currentPlayer} isMyTurn={isMyTurn}
           />
-
-          {/* Right half: 19-24 */}
           <div style={{ display: 'flex', gap: POINT_GAP }}>
-            {topRow.slice(6).map(pt => (
-              <PointTriangle
-                key={pt}
-                pointNumber={pt}
-                isTop={true}
-                color={pointColor(pt)}
-                checkers={getCheckers(pt)}
-                isSelected={selectedPoint === pt}
-                isValidDest={isValidDest(pt)}
-                isMovable={isMovableSrc(pt)}
-                onClick={() => onSelectPoint(pt)}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-              />
-            ))}
+            {topRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={true} />)}
           </div>
-
-          {/* Bear off tray */}
           <BearOffTray
-            whiteCount={borneOff.white}
-            blackCount={borneOff.black}
+            whiteCount={borneOff.white} blackCount={borneOff.black}
             isValidDest={isBearOffDest && isMyTurn}
             onClick={() => isBearOffDest && onSelectPoint('bearoff')}
             onDrop={handleDrop}
           />
         </div>
 
-        {/* Center strip */}
+        {/* Centre strip */}
         <div style={{
           height: 30,
           background: 'linear-gradient(90deg, #0d2a18, #0f3020, #0d2a18)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderTop: '1px solid #1a5030',
-          borderBottom: '1px solid #1a5030',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderTop: '1px solid #1a5030', borderBottom: '1px solid #1a5030',
         }}>
           <div style={{ color: '#3a7a50', fontSize: 13, fontFamily: 'Playfair Display', letterSpacing: 8, opacity: 0.7 }}>
             ✦ TAVLA ✦
           </div>
         </div>
 
-        {/* Bottom half row (points 12-1) */}
+        {/* Bottom row: 12-1 */}
         <div style={{ display: 'flex', flexDirection: 'row', gap: POINT_GAP, alignItems: 'flex-end', marginTop: 4 }}>
-          {/* Left half: 12-7 */}
           <div style={{ display: 'flex', gap: POINT_GAP }}>
-            {bottomRow.slice(0, 6).map(pt => (
-              <PointTriangle
-                key={pt}
-                pointNumber={pt}
-                isTop={false}
-                color={pointColor(pt)}
-                checkers={getCheckers(pt)}
-                isSelected={selectedPoint === pt}
-                isValidDest={isValidDest(pt)}
-                isMovable={isMovableSrc(pt)}
-                onClick={() => onSelectPoint(pt)}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-              />
-            ))}
+            {bottomRow.slice(0, 6).map(pt => <PointTriangle {...ptProps(pt)} isTop={false} />)}
           </div>
-
-          {/* Bar bottom spacer */}
           <div
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); handleDrop('bar'); }}
             style={{ width: 60, height: 200, background: 'linear-gradient(180deg, #1a0f05 0%, #2a1a08 50%, #1a0f05 100%)', borderLeft: '3px solid #6b4a1a', borderRight: '3px solid #6b4a1a', flexShrink: 0 }}
           />
-
-          {/* Right half: 6-1 */}
           <div style={{ display: 'flex', gap: POINT_GAP }}>
-            {bottomRow.slice(6).map(pt => (
-              <PointTriangle
-                key={pt}
-                pointNumber={pt}
-                isTop={false}
-                color={pointColor(pt)}
-                checkers={getCheckers(pt)}
-                isSelected={selectedPoint === pt}
-                isValidDest={isValidDest(pt)}
-                isMovable={isMovableSrc(pt)}
-                onClick={() => onSelectPoint(pt)}
-                onDragStart={handleDragStart}
-                onDrop={handleDrop}
-              />
-            ))}
+            {bottomRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={false} />)}
           </div>
-
-          {/* Bear off tray bottom spacer */}
           <div style={{ width: 55, flexShrink: 0 }} />
         </div>
       </div>
 
       <style>{`
-        @keyframes pulse-dest {
-          0%, 100% { opacity: 0.55; }
-          50%       { opacity: 0.85; }
-        }
-        @keyframes pulse-ring {
-          0%, 100% { opacity: 0.8; }
-          50%       { opacity: 1; }
-        }
+        @keyframes pulse-dest { 0%,100%{opacity:0.55} 50%{opacity:0.88} }
+        @keyframes pulse-ring { 0%,100%{opacity:0.75} 50%{opacity:1} }
       `}</style>
     </div>
   );
