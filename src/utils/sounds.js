@@ -66,94 +66,60 @@ export function playDiceRoll() {
   } catch (e) { /* silent fail */ }
 }
 
+// ─── WOODEN IMPACT HELPER ─────────────────────────────────────────────────────
+// Generates a wood-knock: noise burst shaped by envelope, split into body + click bands
+function woodKnock(c, startTime, amplitude, bodyFreq = 480, clickFreq = 2800, decayMs = 70) {
+  const dur = decayMs / 1000;
+  const len = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    // Very sharp attack, exponential decay — characteristic wood knock envelope
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 5);
+  }
+  const src = c.createBufferSource();
+  src.buffer = buf;
+
+  // Wood body resonance band
+  const body = c.createBiquadFilter();
+  body.type = 'bandpass';
+  body.frequency.value = bodyFreq;
+  body.Q.value = 3.5;
+  const bodyGain = c.createGain();
+  bodyGain.gain.value = amplitude;
+
+  // Surface click band
+  const click = c.createBiquadFilter();
+  click.type = 'bandpass';
+  click.frequency.value = clickFreq;
+  click.Q.value = 1.2;
+  const clickGain = c.createGain();
+  clickGain.gain.value = amplitude * 0.55;
+
+  src.connect(body);  body.connect(bodyGain);   bodyGain.connect(c.destination);
+  src.connect(click); click.connect(clickGain); clickGain.connect(c.destination);
+  src.start(startTime);
+}
+
 // ─── CHECKER MOVE ─────────────────────────────────────────────────────────────
-// Wooden checker placed on board: sharp click + low thud + brief resonance
+// Single wooden checker placed on board: one crisp wood knock
 export function playCheckerMove() {
   try {
     const c = getCtx();
-    const now = c.currentTime;
-
-    // 1. Sharp click transient (wood surface contact)
-    const clickLen = Math.floor(c.sampleRate * 0.01);
-    const clickBuf = c.createBuffer(1, clickLen, c.sampleRate);
-    const cd = clickBuf.getChannelData(0);
-    for (let i = 0; i < clickLen; i++) {
-      cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / clickLen, 2.5);
-    }
-    const clickSrc = c.createBufferSource();
-    clickSrc.buffer = clickBuf;
-    const clickBp = c.createBiquadFilter();
-    clickBp.type = 'bandpass';
-    clickBp.frequency.value = 3200;
-    clickBp.Q.value = 0.6;
-    const clickGain = c.createGain();
-    clickGain.gain.value = 0.8;
-    clickSrc.connect(clickBp);
-    clickBp.connect(clickGain);
-    clickGain.connect(c.destination);
-    clickSrc.start(now);
-
-    // 2. Low thud — body of the wooden checker
-    const thudOsc = c.createOscillator();
-    thudOsc.type = 'sine';
-    thudOsc.frequency.setValueAtTime(210, now);
-    thudOsc.frequency.exponentialRampToValueAtTime(75, now + 0.18);
-    const thudGain = c.createGain();
-    thudGain.gain.setValueAtTime(0, now);
-    thudGain.gain.linearRampToValueAtTime(0.5, now + 0.003);
-    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    thudOsc.connect(thudGain);
-    thudGain.connect(c.destination);
-    thudOsc.start(now);
-    thudOsc.stop(now + 0.2);
-
-    // 3. Brief board resonance
-    const resonOsc = c.createOscillator();
-    resonOsc.type = 'triangle';
-    resonOsc.frequency.value = 340;
-    const resonGain = c.createGain();
-    resonGain.gain.setValueAtTime(0, now);
-    resonGain.gain.linearRampToValueAtTime(0.1, now + 0.005);
-    resonGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-    resonOsc.connect(resonGain);
-    resonGain.connect(c.destination);
-    resonOsc.start(now);
-    resonOsc.stop(now + 0.28);
+    woodKnock(c, c.currentTime, 1.1, 480 + Math.random() * 60, 2800, 65);
   } catch (e) { /* silent fail */ }
 }
 
 // ─── CHECKER HIT (sent to bar) ────────────────────────────────────────────────
+// Two pieces clashing — louder double wood knock
 export function playCheckerHit() {
   try {
     const c = getCtx();
     const now = c.currentTime;
-
-    // Harder impact
-    const osc = c.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(240, now);
-    osc.frequency.exponentialRampToValueAtTime(70, now + 0.25);
-    const gain = c.createGain();
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.55, now + 0.003);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-    osc.connect(gain);
-    gain.connect(c.destination);
-    osc.start(now);
-    osc.stop(now + 0.25);
-
-    // Clack
-    const len = Math.floor(c.sampleRate * 0.015);
-    const buf = c.createBuffer(1, len, c.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    const g = c.createGain();
-    g.gain.value = 0.5;
-    src.connect(g);
-    g.connect(c.destination);
-    src.start(now);
+    // First piece contact — full force
+    woodKnock(c, now,        2.0, 380, 2400, 90);
+    // Second piece recoil a few ms later — slightly softer
+    woodKnock(c, now + 0.018, 1.4, 520, 3200, 60);
   } catch (e) { /* silent fail */ }
 }
 

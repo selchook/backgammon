@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Ably from 'ably';
-import { playDiceRoll, playCheckerMove } from '../utils/sounds';
+import { playDiceRoll, playCheckerMove, playCheckerHit } from '../utils/sounds';
 import {
   createInitialState, rollDice, applyMove, skipTurn,
-  getValidMoves, getMovableSources, hasAnyMove, canBearOff
+  getValidMoves, getMovableSources, hasAnyMove, canBearOff, opponent
 } from '../game/backgammon';
 
 const generateRoomId = () => Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -83,8 +83,13 @@ export function useAblyGame() {
         if (incoming.dice?.length > 0 && prev?.dice?.length === 0) {
           playDiceRoll();
         } else if (prev?.dice?.length > 0 && incoming.dice?.length < prev.dice.length) {
-          // Opponent moved a checker — dice count decreased
-          playCheckerMove();
+          // Opponent moved — detect if one of MY pieces was hit (sent to bar)
+          const me = playerColorRef.current;
+          if (me && incoming.bar[me] > (prev?.bar[me] ?? 0)) {
+            playCheckerHit();
+          } else {
+            playCheckerMove();
+          }
         }
         setGameState(incoming);
         setSelectedPoint(null);
@@ -187,6 +192,8 @@ export function useAblyGame() {
       });
       if (!matchDest) return;
 
+      const isHit = typeof matchDest.to === 'number' && gs.points[matchDest.to]?.color === opponent(gs.currentPlayer) && gs.points[matchDest.to].count === 1;
+      isHit ? playCheckerHit() : playCheckerMove();
       moveHistory.current.push(gs); // save state before move for undo
       const newState = applyMove(gs, selectedPoint, matchDest.to, matchDest.die);
       gameStateRef.current = newState;
@@ -197,6 +204,30 @@ export function useAblyGame() {
 
       if (newState.phase === 'ended') setStatus('ended');
       return;
+    }
+
+    // Combined (two-dice) move: tap a blue-ring destination
+    if (selectedPoint !== null && typeof point === 'number' && gs.dice.length === 2) {
+      for (const firstMove of validDestinations) {
+        if (firstMove.to < 1 || firstMove.to > 24) continue;
+        const mid = applyMove(gs, selectedPoint, firstMove.to, firstMove.die);
+        if (mid.phase !== 'moving' || mid.currentPlayer !== playerColorRef.current) continue;
+        const secondMoves = getValidMoves(mid, firstMove.to, playerColorRef.current);
+        const secondMatch = secondMoves.find(m => m.to === point);
+        if (secondMatch) {
+          const isHit = gs.points[point]?.color === opponent(gs.currentPlayer) && gs.points[point].count === 1;
+          isHit ? playCheckerHit() : playCheckerMove();
+          moveHistory.current.push(gs);
+          const final = applyMove(mid, firstMove.to, secondMatch.to, secondMatch.die);
+          gameStateRef.current = final;
+          setGameState(final);
+          setSelectedPoint(null);
+          setValidDestinations([]);
+          publishState(final);
+          if (final.phase === 'ended') setStatus('ended');
+          return;
+        }
+      }
     }
 
     // If clicking a bar when we have checkers there
@@ -253,6 +284,8 @@ export function useAblyGame() {
       return;
     }
 
+    const isHit = typeof match.to === 'number' && gs.points[match.to]?.color === opponent(player) && gs.points[match.to].count === 1;
+    isHit ? playCheckerHit() : playCheckerMove();
     moveHistory.current.push(gs); // save state before move for undo
     const newState = applyMove(gs, from, match.to, match.die);
     gameStateRef.current = newState;

@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { playCheckerMove } from '../utils/sounds';
+
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 // Portrait board: H(672) > W(586)
@@ -433,7 +433,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
       if (dest !== null && dest !== src) {
         // Real drag: use handleDirectMove which relies only on refs (no stale
         // closure) — this is the fix for bear-off and all touch-drag moves.
-        playCheckerMove();
+        // Sound is played inside handleDirectMove (with blot hit detection).
         onDirectMoveRef.current(src, dest);
       } else if (dest === src) {
         // Finger lifted on same point → just keep the piece selected (already
@@ -469,10 +469,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const handleDragStart = (pt) => { dropOccurred.current = false; onSelectPoint(pt); };
   const handleDrop      = (pt) => {
     dropOccurred.current = true;
-    const valid = pt === 'bearoff'
-      ? validDestinations.some(d => d.to === 0 || d.to === 25)
-      : validDestinations.some(d => d.to === pt);
-    if (valid) playCheckerMove();
+    // Sound is played inside handleSelectPoint (with blot hit detection).
     onSelectPoint(pt);
   };
   const handleDragEnd = () => { if (!dropOccurred.current) onSelectPoint(null); dropOccurred.current = false; };
