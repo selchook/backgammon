@@ -18,7 +18,7 @@ const POINT_GAP = 2;
 // ─── POINT TRIANGLE ──────────────────────────────────────────────────────────
 function PointTriangle({
   pointNumber, isTop, color, checkers,
-  isSelected, isValidDest, isMovable,
+  isSelected, isValidDest, isCombinedDest, isMovable,
   onClick, onDragStart, onDrop, d,
 }) {
   const topCheckerRef = useRef(null);
@@ -31,17 +31,19 @@ function PointTriangle({
   const clipTop    = `polygon(0% 0%, 100% 0%, 50% 100%)`;
   const clipBottom = `polygon(50% 0%, 0% 100%, 100% 100%)`;
 
-  const overlayColor = isSelected  ? 'rgba(255,215,0,0.45)'
-                     : isValidDest ? 'rgba(40,210,100,0.55)'
-                     : isMovable   ? 'rgba(255,200,50,0.28)'
+  const overlayColor = isSelected      ? 'rgba(255,215,0,0.45)'
+                     : isValidDest     ? 'rgba(40,210,100,0.55)'
+                     : isCombinedDest  ? 'rgba(40,160,255,0.30)'
+                     : isMovable       ? 'rgba(255,200,50,0.28)'
                      : null;
 
-  const glowColor = isSelected  ? '#ffd700'
-                  : isValidDest ? '#00e87a'
-                  : isMovable   ? '#f1fa8c'
+  const glowColor = isSelected      ? '#ffd700'
+                  : isValidDest     ? '#00e87a'
+                  : isCombinedDest  ? '#40a0ff'
+                  : isMovable       ? '#f1fa8c'
                   : 'transparent';
 
-  const hasHighlight = isSelected || isValidDest || isMovable;
+  const hasHighlight = isSelected || isValidDest || isCombinedDest || isMovable;
 
   return (
     <div
@@ -96,6 +98,23 @@ function PointTriangle({
           animation: 'pulse-ring 0.9s ease-in-out infinite',
           pointerEvents: 'none',
           zIndex: 25,
+        }} />
+      )}
+      {/* Dashed ring for combined (both-dice) destinations */}
+      {isCombinedDest && !isValidDest && (
+        <div style={{
+          position: 'absolute',
+          top:    isTop ? 'auto' : 4,
+          bottom: isTop ? 4 : 'auto',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 26, height: 26,
+          borderRadius: '50%',
+          border: '2px dashed #40a0ff',
+          boxShadow: '0 0 8px rgba(64,160,255,0.6)',
+          animation: 'pulse-ring 1.2s ease-in-out infinite',
+          pointerEvents: 'none',
+          zIndex: 24,
         }} />
       )}
 
@@ -289,7 +308,7 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }
 }
 
 // ─── MAIN BOARD ──────────────────────────────────────────────────────────────
-export default function Board({ gameState, selectedPoint, validDestinations, movableSources, allValidDests = [], playerColor, isMyTurn, onSelectPoint, onDirectMove, landscape }) {
+export default function Board({ gameState, selectedPoint, validDestinations, movableSources, combinedDests = [], playerColor, isMyTurn, onSelectPoint, onDirectMove, landscape }) {
   if (!gameState) return null;
 
   const { points, bar, borneOff, currentPlayer } = gameState;
@@ -439,15 +458,12 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   }, []); // intentionally empty — all live values read via refs above
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const getCheckers   = (pt) => { const p = points[pt]; return (!p || !p.color || p.count === 0) ? [] : Array(p.count).fill(p.color); };
-  // When a piece is selected show its specific dests; otherwise show all reachable squares
-  const effectiveDests = selectedPoint !== null ? new Set(validDestinations.map(d => d.to)) : new Set(allValidDests);
-  const isValidDest   = (pt) => effectiveDests.has(pt);
-  const isMovableSrc  = (pt) => movableSources.includes(pt);
-  const isBearOffDest = selectedPoint !== null
-    ? validDestinations.some(d => d.to === 0 || d.to === 25)
-    : allValidDests.includes(0) || allValidDests.includes(25);
-  const ptColor       = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
+  const getCheckers      = (pt) => { const p = points[pt]; return (!p || !p.color || p.count === 0) ? [] : Array(p.count).fill(p.color); };
+  const isValidDest      = (pt) => validDestinations.some(d => d.to === pt);
+  const isCombinedDest   = (pt) => !isValidDest(pt) && combinedDests.includes(pt);
+  const isMovableSrc     = (pt) => movableSources.includes(pt);
+  const isBearOffDest    = validDestinations.some(d => d.to === 0 || d.to === 25);
+  const ptColor          = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
   const handleDragStart = (pt) => { dropOccurred.current = false; onSelectPoint(pt); };
@@ -463,7 +479,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
   const ptProps = (pt) => ({
     key: pt, pointNumber: pt, color: ptColor(pt), checkers: getCheckers(pt),
-    isSelected: selectedPoint === pt, isValidDest: isValidDest(pt), isMovable: isMovableSrc(pt),
+    isSelected: selectedPoint === pt, isValidDest: isValidDest(pt), isCombinedDest: isCombinedDest(pt), isMovable: isMovableSrc(pt),
     onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onDrop: handleDrop, d,
   });
 

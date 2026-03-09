@@ -298,10 +298,22 @@ export function useAblyGame() {
     ? getMovableSources(gameState, playerColor)
     : [];
 
-  // All reachable destinations from any movable piece (shown before piece selection)
-  const allValidDests = gameState && gameState.phase === 'moving' && gameState.currentPlayer === playerColor
-    ? [...new Set(movableSources.flatMap(src => getValidMoves(gameState, src, playerColor).map(m => m.to)))]
-    : [];
+  // Two-dice combined destinations for the selected piece (reachable only by using both dice in sequence)
+  const combinedDests = (() => {
+    if (!selectedPoint || !gameState || gameState.phase !== 'moving' || gameState.currentPlayer !== playerColor) return [];
+    if (validDestinations.length === 0 || gameState.dice.length !== 2) return [];
+    const singleDests = new Set(validDestinations.map(m => m.to));
+    const combined = new Set();
+    for (const firstMove of validDestinations) {
+      if (firstMove.to < 1 || firstMove.to > 24) continue; // skip bear-off intermediates
+      const after = applyMove(gameState, selectedPoint, firstMove.to, firstMove.die);
+      if (after.phase !== 'moving' || after.currentPlayer !== playerColor) continue;
+      for (const sm of getValidMoves(after, firstMove.to, playerColor)) {
+        if (!singleDests.has(sm.to) && sm.to >= 1 && sm.to <= 24) combined.add(sm.to);
+      }
+    }
+    return [...combined];
+  })();
 
   const isMyTurn = gameState?.currentPlayer === playerColor;
   const bearingOff = gameState ? canBearOff(gameState, playerColor) : false;
@@ -315,7 +327,7 @@ export function useAblyGame() {
     selectedPoint,
     validDestinations,
     movableSources,
-    allValidDests,
+    combinedDests,
     opponentConnected,
     chatMessages,
     lastEvent,

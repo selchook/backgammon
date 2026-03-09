@@ -123,7 +123,7 @@ function FullscreenBtn() {
 export default function App() {
   const {
     gameState, playerColor, roomId, status,
-    selectedPoint, validDestinations, movableSources, allValidDests,
+    selectedPoint, validDestinations, movableSources, combinedDests,
     opponentConnected, chatMessages, isMyTurn,
     canUndo, handleUndo,
     createRoom, joinRoom, handleRoll, handleSelectPoint, handleDirectMove,
@@ -173,7 +173,7 @@ export default function App() {
           selectedPoint={selectedPoint}
           validDestinations={validDestinations}
           movableSources={movableSources}
-          allValidDests={allValidDests}
+          combinedDests={combinedDests}
           playerColor={playerColor}
           isMyTurn={isMyTurn}
           onSelectPoint={handleSelectPoint}
