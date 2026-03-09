@@ -521,7 +521,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
           borderTop: '1px solid #1a5030', borderBottom: '1px solid #1a5030',
         }}>
           <div style={{ color: '#3a7a50', fontSize: 12, fontFamily: 'Playfair Display', letterSpacing: 8, opacity: 0.7 }}>
-            ✦ TAVLA ✦
+            ✦ Üstad Tito ✦
           </div>
         </div>
 

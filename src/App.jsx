@@ -67,7 +67,7 @@ function Logo({ portrait }) {
         fontSize: ts, fontWeight: 900, color: '#e8d48c',
         letterSpacing: ls, fontFamily: 'Playfair Display, serif',
         textShadow: '0 1px 8px rgba(200,168,75,0.4)',
-      }}>TAVLA</span>
+      }}>Üstad Tito</span>
       <span style={{ fontSize: fs, filter: 'drop-shadow(0 1px 4px rgba(200,168,75,0.6))', transform: 'scaleX(-1)' }}>🎲</span>
     </div>
   );

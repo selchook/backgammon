@@ -111,7 +111,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }) {
             color: '#e8d48c',
             letterSpacing: 4,
             textShadow: '0 2px 20px rgba(200,168,75,0.4)',
-          }}>TAVLA</h1>
+          }}>Üstad Tito</h1>
           <p style={{
             margin: '6px 0 0',
             color: '#7a6030',
