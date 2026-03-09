@@ -78,16 +78,21 @@ function FullscreenBtn() {
   const [full, setFull] = useState(false);
 
   useEffect(() => {
-    const onChange = () => setFull(!!document.fullscreenElement);
+    const onChange = () => setFull(!!(document.fullscreenElement || document.webkitFullscreenElement));
     document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
   }, []);
 
   const toggle = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
+    const el = document.documentElement;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el)?.catch?.(() => {});
     } else {
-      document.exitFullscreen?.().catch(() => {});
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
     }
   };
 
@@ -106,6 +111,7 @@ function FullscreenBtn() {
         fontSize: 16,
         lineHeight: 1,
         backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
       }}
     >
       {full ? '⊡' : '⛶'}
@@ -137,7 +143,7 @@ export default function App() {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0,
+      position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
       background: 'radial-gradient(ellipse at center, #1a0d04 0%, #0d0703 100%)',
       display: 'flex',
       flexDirection: 'column',

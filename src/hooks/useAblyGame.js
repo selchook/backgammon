@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Ably from 'ably';
-import { playDiceRoll } from '../utils/sounds';
+import { playDiceRoll, playCheckerMove } from '../utils/sounds';
 import {
   createInitialState, rollDice, applyMove, skipTurn,
   getValidMoves, getMovableSources, hasAnyMove, canBearOff
@@ -77,9 +77,13 @@ export function useAblyGame() {
     channel.subscribe('state-sync', (msg) => {
       if (msg.clientId !== clientId.current) {
         const incoming = msg.data.state;
+        const prev = gameStateRef.current;
         // Opponent just rolled — play dice sound
-        if (incoming.dice?.length > 0 && gameStateRef.current?.dice?.length === 0) {
+        if (incoming.dice?.length > 0 && prev?.dice?.length === 0) {
           playDiceRoll();
+        } else if (prev?.dice?.length > 0 && incoming.dice?.length < prev.dice.length) {
+          // Opponent moved a checker — dice count decreased
+          playCheckerMove();
         }
         setGameState(incoming);
         setSelectedPoint(null);
