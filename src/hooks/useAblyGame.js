@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Ably from 'ably';
+import { playDiceRoll } from '../utils/sounds';
 import {
   createInitialState, rollDice, applyMove, skipTurn,
   getValidMoves, getMovableSources, hasAnyMove, canBearOff
@@ -75,7 +76,12 @@ export function useAblyGame() {
     // State sync (moves, rolls)
     channel.subscribe('state-sync', (msg) => {
       if (msg.clientId !== clientId.current) {
-        setGameState(msg.data.state);
+        const incoming = msg.data.state;
+        // Opponent just rolled — play dice sound
+        if (incoming.dice?.length > 0 && gameStateRef.current?.dice?.length === 0) {
+          playDiceRoll();
+        }
+        setGameState(incoming);
         setSelectedPoint(null);
         setValidDestinations([]);
       }
@@ -134,13 +140,18 @@ export function useAblyGame() {
     const dice = rollDice();
     const newState = { ...gs, dice, phase: 'moving' };
 
-    // If no moves possible, auto-skip
+    // If no moves possible, show dice briefly then auto-skip
     if (!hasAnyMove(newState, gs.currentPlayer)) {
-      const skipped = skipTurn(newState);
-      gameStateRef.current = skipped;
-      setGameState(skipped);
-      setLastEvent({ type: 'no-moves' });
-      publishState(skipped);
+      gameStateRef.current = newState;
+      setGameState(newState);
+      publishState(newState);
+      setTimeout(() => {
+        const skipped = skipTurn(newState);
+        gameStateRef.current = skipped;
+        setGameState(skipped);
+        setLastEvent({ type: 'no-moves' });
+        publishState(skipped);
+      }, 1200);
       return;
     }
 

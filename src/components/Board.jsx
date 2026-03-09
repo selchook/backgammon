@@ -25,8 +25,8 @@ function PointTriangle({
   const { POINT_W, POINT_H, CHECKER, STEP } = d;
 
   const triColor = color === 'dark'
-    ? 'rgba(120, 60, 20, 0.9)'
-    : 'rgba(30, 100, 60, 0.85)';
+    ? 'rgba(190, 80, 15, 0.95)'
+    : 'rgba(220, 200, 100, 0.85)';
 
   const clipTop    = `polygon(0% 0%, 100% 0%, 50% 100%)`;
   const clipBottom = `polygon(50% 0%, 0% 100%, 100% 100%)`;
@@ -176,7 +176,7 @@ function PointTriangle({
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
 function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn, d }) {
-  const { BAR_W, BAR_CHECKER } = d;
+  const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
@@ -200,7 +200,7 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
       onDragOver={e => e.preventDefault()}
       onDrop={e => { e.preventDefault(); onDrop && onDrop('bar'); }}
       style={{
-        width: BAR_W, height: '100%',
+        width: BAR_W, height: POINT_H,
         background: 'linear-gradient(180deg, #1a0f05 0%, #2a1a08 50%, #1a0f05 100%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         gap: 10,
