@@ -54,7 +54,7 @@ function ChatPanel({ messages, onSend, portrait }) {
     }}>
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {messages.length === 0 && (
-          <div style={{ color: '#4a3820', fontSize: 13, fontFamily: 'Space Mono', textAlign: 'center', marginTop: 20 }}>
+          <div style={{ color: '#4a3820', fontSize: 11, fontFamily: 'Space Mono', textAlign: 'center', marginTop: 20 }}>
             No messages yet
           </div>
         )}
@@ -63,9 +63,9 @@ function ChatPanel({ messages, onSend, portrait }) {
             <div style={{
               background: m.sender === 'me' ? 'linear-gradient(135deg, #8b6914, #c8a84b)' : 'rgba(255,255,255,0.08)',
               color: m.sender === 'me' ? '#1a0f02' : '#d0c090',
-              padding: '5px 12px',
+              padding: '4px 10px',
               borderRadius: m.sender === 'me' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-              fontSize: 15, fontFamily: 'Crimson Text, serif', maxWidth: '75%',
+              fontSize: 12, fontFamily: 'Crimson Text, serif', maxWidth: '75%',
             }}>{m.text}</div>
           </div>
         ))}
@@ -76,12 +76,12 @@ function ChatPanel({ messages, onSend, portrait }) {
           value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           placeholder="Message..."
-          style={{ flex: 1, background: 'transparent', border: 'none', color: '#d0c090', fontSize: 15, fontFamily: 'Crimson Text, serif', outline: 'none' }}
+          style={{ flex: 1, background: 'transparent', border: 'none', color: '#d0c090', fontSize: 12, fontFamily: 'Crimson Text, serif', outline: 'none' }}
         />
         <button onClick={handleSend} style={{
           background: 'rgba(200,168,75,0.2)', border: '1px solid rgba(200,168,75,0.3)',
-          borderRadius: 6, color: '#c8a84b', padding: '4px 12px', cursor: 'pointer',
-          fontSize: 15, fontFamily: 'Space Mono',
+          borderRadius: 6, color: '#c8a84b', padding: '4px 10px', cursor: 'pointer',
+          fontSize: 12, fontFamily: 'Space Mono',
         }}>→</button>
       </div>
     </div>
