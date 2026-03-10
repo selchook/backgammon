@@ -9,6 +9,26 @@ import {
 const generateRoomId = () => Math.random().toString(36).substr(2, 6).toUpperCase();
 const generateClientId = () => `p-${Math.random().toString(36).substr(2, 8)}`;
 
+// ─── PATH FINDER ──────────────────────────────────────────────────────────────
+// DFS: find the shortest sequence of valid moves from `from` to reach `to`.
+// Returns [{from, to, die}, ...] or null. Terminates because each step
+// consumes one die (bounded depth = initial dice count, max 4).
+function findMovePath(gs, from, to, player) {
+  function dfs(state, curPt) {
+    if (state.dice.length === 0) return null;
+    for (const m of getValidMoves(state, curPt, player)) {
+      if (m.to === to) return [{ from: curPt, to: m.to, die: m.die }];
+      if (m.to < 1 || m.to > 24) continue; // can't continue from off-board
+      const next = applyMove(state, curPt, m.to, m.die);
+      if (next.phase !== 'moving' || next.currentPlayer !== player) continue;
+      const rest = dfs(next, m.to);
+      if (rest) return [{ from: curPt, to: m.to, die: m.die }, ...rest];
+    }
+    return null;
+  }
+  return dfs(gs, from);
+}
+
 export function useAblyGame() {
   const [gameState, setGameState] = useState(null);
   const [playerColor, setPlayerColor] = useState(null); // 'white' | 'black'
@@ -206,27 +226,22 @@ export function useAblyGame() {
       return;
     }
 
-    // Combined (two-dice) move: tap a blue-ring destination
-    if (selectedPoint !== null && typeof point === 'number' && gs.dice.length === 2) {
-      for (const firstMove of validDestinations) {
-        if (firstMove.to < 1 || firstMove.to > 24) continue;
-        const mid = applyMove(gs, selectedPoint, firstMove.to, firstMove.die);
-        if (mid.phase !== 'moving' || mid.currentPlayer !== playerColorRef.current) continue;
-        const secondMoves = getValidMoves(mid, firstMove.to, playerColorRef.current);
-        const secondMatch = secondMoves.find(m => m.to === point);
-        if (secondMatch) {
-          const isHit = gs.points[point]?.color === opponent(gs.currentPlayer) && gs.points[point].count === 1;
-          isHit ? playCheckerHit() : playCheckerMove();
-          moveHistory.current.push(gs);
-          const final = applyMove(mid, firstMove.to, secondMatch.to, secondMatch.die);
-          gameStateRef.current = final;
-          setGameState(final);
-          setSelectedPoint(null);
-          setValidDestinations([]);
-          publishState(final);
-          if (final.phase === 'ended') setStatus('ended');
-          return;
-        }
+    // Multi-die combined move: tap a blue-ring destination
+    if (selectedPoint !== null && typeof point === 'number') {
+      const path = findMovePath(gs, selectedPoint, point, gs.currentPlayer);
+      if (path && path.length >= 2) {
+        const isHit = gs.points[point]?.color === opponent(gs.currentPlayer) && gs.points[point].count === 1;
+        isHit ? playCheckerHit() : playCheckerMove();
+        moveHistory.current.push(gs);
+        let state = gs;
+        for (const step of path) state = applyMove(state, step.from, step.to, step.die);
+        gameStateRef.current = state;
+        setGameState(state);
+        setSelectedPoint(null);
+        setValidDestinations([]);
+        publishState(state);
+        if (state.phase === 'ended') setStatus('ended');
+        return;
       }
     }
 
@@ -276,27 +291,22 @@ export function useAblyGame() {
     );
 
     if (!match) {
-      // Try combined two-dice move (drag to blue-ring destination)
-      if (typeof to === 'number' && gs.dice.length === 2) {
-        for (const firstMove of moves) {
-          if (firstMove.to < 1 || firstMove.to > 24) continue;
-          const mid = applyMove(gs, from, firstMove.to, firstMove.die);
-          if (mid.phase !== 'moving' || mid.currentPlayer !== player) continue;
-          const secondMoves = getValidMoves(mid, firstMove.to, player);
-          const secondMatch = secondMoves.find(m => m.to === to);
-          if (secondMatch) {
-            const isHit = gs.points[to]?.color === opponent(player) && gs.points[to].count === 1;
-            isHit ? playCheckerHit() : playCheckerMove();
-            moveHistory.current.push(gs);
-            const final = applyMove(mid, firstMove.to, secondMatch.to, secondMatch.die);
-            gameStateRef.current = final;
-            setGameState(final);
-            setSelectedPoint(null);
-            setValidDestinations([]);
-            publishState(final);
-            if (final.phase === 'ended') setStatus('ended');
-            return;
-          }
+      // Try combined multi-dice move (drag to blue-ring destination)
+      if (typeof to === 'number') {
+        const path = findMovePath(gs, from, to, player);
+        if (path && path.length >= 2) {
+          const isHit = gs.points[to]?.color === opponent(player) && gs.points[to].count === 1;
+          isHit ? playCheckerHit() : playCheckerMove();
+          moveHistory.current.push(gs);
+          let state = gs;
+          for (const step of path) state = applyMove(state, step.from, step.to, step.die);
+          gameStateRef.current = state;
+          setGameState(state);
+          setSelectedPoint(null);
+          setValidDestinations([]);
+          publishState(state);
+          if (state.phase === 'ended') setStatus('ended');
+          return;
         }
       }
       // Invalid drop target — select the source so the player can tap a dest
@@ -354,19 +364,28 @@ export function useAblyGame() {
     ? getMovableSources(gameState, playerColor)
     : [];
 
-  // Two-dice combined destinations for the selected piece (reachable only by using both dice in sequence)
+  // Combined destinations: all board points reachable only by using 2+ dice in sequence.
+  // Works for doubles (4 dice) — explores all depths recursively.
   const combinedDests = (() => {
     if (!selectedPoint || !gameState || gameState.phase !== 'moving' || gameState.currentPlayer !== playerColor) return [];
     if (validDestinations.length === 0 || gameState.dice.length < 2) return [];
     const singleDests = new Set(validDestinations.map(m => m.to));
     const combined = new Set();
-    for (const firstMove of validDestinations) {
-      if (firstMove.to < 1 || firstMove.to > 24) continue; // skip bear-off intermediates
-      const after = applyMove(gameState, selectedPoint, firstMove.to, firstMove.die);
-      if (after.phase !== 'moving' || after.currentPlayer !== playerColor) continue;
-      for (const sm of getValidMoves(after, firstMove.to, playerColor)) {
-        if (!singleDests.has(sm.to) && sm.to >= 1 && sm.to <= 24) combined.add(sm.to);
+    // Recursively explore moves from intermediate positions, adding any new board points found
+    function explore(state, from) {
+      for (const m of getValidMoves(state, from, playerColor)) {
+        if (m.to < 1 || m.to > 24) continue;
+        if (!singleDests.has(m.to)) combined.add(m.to);
+        const next = applyMove(state, from, m.to, m.die);
+        if (next.phase !== 'moving' || next.currentPlayer !== playerColor) continue;
+        if (next.dice.length >= 1) explore(next, m.to);
       }
+    }
+    for (const fd of validDestinations) {
+      if (fd.to < 1 || fd.to > 24) continue;
+      const after = applyMove(gameState, selectedPoint, fd.to, fd.die);
+      if (after.phase !== 'moving' || after.currentPlayer !== playerColor) continue;
+      explore(after, fd.to);
     }
     return [...combined];
   })();
