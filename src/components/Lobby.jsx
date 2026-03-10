@@ -175,17 +175,6 @@ export default function Lobby({ onCreateRoom, onJoinRoom }) {
           }}>{error}</div>
         )}
 
-        {/* Footer note */}
-        <p style={{
-          marginTop: 32,
-          textAlign: 'center',
-          color: '#4a3820',
-          fontSize: 11,
-          fontFamily: 'Space Mono',
-          lineHeight: 1.6,
-        }}>
-          Requires VITE_ABLY_API_KEY environment variable
-        </p>
       </div>
     </div>
   );
