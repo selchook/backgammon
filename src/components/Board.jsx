@@ -19,7 +19,7 @@ const POINT_GAP = 2;
 function PointTriangle({
   pointNumber, isTop, color, checkers,
   isSelected, isValidDest, isCombinedDest, isMovable,
-  onClick, onDragStart, onDrop, d,
+  onClick, onDragStart, onMouseDown, onDrop, d,
 }) {
   const topCheckerRef = useRef(null);
   const { POINT_W, POINT_H, CHECKER, STEP } = d;
@@ -149,6 +149,7 @@ function PointTriangle({
               key={i}
               ref={isTopChecker ? topCheckerRef : null}
               draggable={canDrag}
+              onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown(pointNumber); } : undefined}
               onDragStart={canDrag ? (e) => {
                 if (topCheckerRef.current) e.dataTransfer.setDragImage(topCheckerRef.current, 15, 15);
                 e.stopPropagation();
@@ -194,7 +195,7 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
-function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onDrop, currentPlayer, isMyTurn, d }) {
+function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, isMyTurn, d }) {
   const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
@@ -238,6 +239,7 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
           return (
             <div key={i} ref={isTopChecker ? topBlackRef : null}
               draggable={canDrag}
+              onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
               onDragStart={canDrag ? (e) => {
                 if (topBlackRef.current) e.dataTransfer.setDragImage(topBlackRef.current, 14, 14);
                 e.stopPropagation(); onDragStart && onDragStart('bar');
@@ -257,6 +259,7 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
           return (
             <div key={i} ref={isTopChecker ? topWhiteRef : null}
               draggable={canDrag}
+              onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
               onDragStart={canDrag ? (e) => {
                 if (topWhiteRef.current) e.dataTransfer.setDragImage(topWhiteRef.current, 14, 14);
                 e.stopPropagation(); onDragStart && onDragStart('bar');
@@ -466,7 +469,8 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const ptColor          = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
-  const handleDragStart = (pt) => { dropOccurred.current = false; onSelectPoint(pt); };
+  const handleMouseDown = (pt) => { onSelectPoint(pt); };
+  const handleDragStart = (pt) => { dropOccurred.current = false; }; // selection already done in mousedown
   const handleDrop      = (pt) => {
     dropOccurred.current = true;
     // Sound is played inside handleSelectPoint (with blot hit detection).
@@ -477,7 +481,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const ptProps = (pt) => ({
     key: pt, pointNumber: pt, color: ptColor(pt), checkers: getCheckers(pt),
     isSelected: selectedPoint === pt, isValidDest: isValidDest(pt), isCombinedDest: isCombinedDest(pt), isMovable: isMovableSrc(pt),
-    onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onDrop: handleDrop, d,
+    onClick: () => onSelectPoint(pt), onDragStart: handleDragStart, onMouseDown: handleMouseDown, onDrop: handleDrop, d,
   });
 
   const topRow    = flip ? [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1] : [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
@@ -515,7 +519,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             whiteCount={bar.white} blackCount={bar.black}
             selectedPoint={selectedPoint}
             onClickBar={() => onSelectPoint('bar')}
-            onDragStart={handleDragStart} onDrop={handleDrop}
+            onDragStart={handleDragStart} onMouseDown={handleMouseDown} onDrop={handleDrop}
             currentPlayer={currentPlayer} isMyTurn={isMyTurn}
             d={d}
           />

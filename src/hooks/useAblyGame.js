@@ -357,7 +357,7 @@ export function useAblyGame() {
   // Two-dice combined destinations for the selected piece (reachable only by using both dice in sequence)
   const combinedDests = (() => {
     if (!selectedPoint || !gameState || gameState.phase !== 'moving' || gameState.currentPlayer !== playerColor) return [];
-    if (validDestinations.length === 0 || gameState.dice.length !== 2) return [];
+    if (validDestinations.length === 0 || gameState.dice.length < 2) return [];
     const singleDests = new Set(validDestinations.map(m => m.to));
     const combined = new Set();
     for (const firstMove of validDestinations) {
