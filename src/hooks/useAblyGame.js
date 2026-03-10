@@ -137,6 +137,9 @@ export function useAblyGame() {
     playerColorRef.current = 'white';
     setStatus('waiting');
 
+    // Attach before subscribing so the server confirms our subscription
+    // before we publish — prevents missing messages on slow connections.
+    await channel.attach();
     subscribeToChannel(channel, 'white');
 
     // Announce ourselves
@@ -156,6 +159,10 @@ export function useAblyGame() {
     playerColorRef.current = 'black';
     setStatus('waiting');
 
+    // Attach first so our game-start subscription is live before we publish
+    // player-join. Without this, white can respond with game-start before
+    // black's subscription is registered server-side (race on mobile).
+    await channel.attach();
     subscribeToChannel(channel, 'black');
 
     await channel.publish('player-join', { clientId: clientId.current, color: 'black' });

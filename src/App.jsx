@@ -136,7 +136,12 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
-    if (room && status === 'idle') joinRoom(room.toUpperCase());
+    if (room && status === 'idle') {
+      joinRoom(room.toUpperCase()).catch(() => {
+        // Connection failed — clear the URL param so the user can try manually
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+    }
   }, []);
 
   if (status === 'idle')    return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />;
