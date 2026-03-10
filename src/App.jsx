@@ -149,7 +149,10 @@ export default function App() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
+      // Landscape: top-align so logo never overlaps the board
+      justifyContent: 'flex-start',
+      paddingTop: portrait ? 0 : LOGO_H,
+      boxSizing: 'border-box',
       // Portrait: allow scrolling so GameInfo below the board is reachable
       overflowY: portrait ? 'auto' : 'hidden',
       overflowX: 'hidden',
@@ -166,7 +169,7 @@ export default function App() {
         alignItems: portrait ? 'center' : 'flex-start',
         zoom: scale,
         flexShrink: 0,
-        marginTop: portrait ? LOGO_H : 0,
+        marginTop: portrait ? LOGO_H : 0, // landscape top is handled by outer paddingTop
       }}>
         <Board
           gameState={gameState}

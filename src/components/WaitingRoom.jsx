@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 export default function WaitingRoom({ roomId, playerColor, onBack }) {
   const shareUrl  = `${window.location.origin}?room=${roomId}`;
-  const shareText = `Join me for a game of Tavla! Room code: ${roomId}\n${shareUrl}`;
+  const shareText = `Join me for a game of Tavla! Room code: ${roomId}`;
 
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
