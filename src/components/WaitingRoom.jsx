@@ -1,12 +1,32 @@
-import React from 'react';
+import { useState } from 'react';
 
 export default function WaitingRoom({ roomId, playerColor, onBack }) {
-  const shareUrl = `${window.location.origin}?room=${roomId}`;
+  const shareUrl  = `${window.location.origin}?room=${roomId}`;
   const shareText = `Join me for a game of Tavla! Room code: ${roomId}\n${shareUrl}`;
 
-  const copyCode  = () => navigator.clipboard.writeText(roomId);
-  const copyUrl   = () => navigator.clipboard.writeText(shareUrl);
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(roomId);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const share = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Üstad Tito', text: shareText, url: shareUrl }); }
+      catch (_) { /* user cancelled */ }
+    } else {
+      copyUrl();
+    }
+  };
 
   return (
     <div style={{
@@ -50,21 +70,19 @@ export default function WaitingRoom({ roomId, playerColor, onBack }) {
           </div>
         </div>
 
-        {/* Share buttons */}
+        {/* Copy buttons */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-          <button onClick={copyCode} style={btnStyle}>
-            📋 Copy Code
+          <button onClick={copyCode} style={{ ...btnStyle, color: copiedCode ? '#5de87a' : '#a08040', borderColor: copiedCode ? 'rgba(93,232,122,0.5)' : 'rgba(180,140,60,0.3)' }}>
+            {copiedCode ? '✓ Copied!' : '📋 Copy Code'}
           </button>
-          <button onClick={copyUrl} style={btnStyle}>
-            🔗 Copy Link
+          <button onClick={copyUrl} style={{ ...btnStyle, color: copiedLink ? '#5de87a' : '#a08040', borderColor: copiedLink ? 'rgba(93,232,122,0.5)' : 'rgba(180,140,60,0.3)' }}>
+            {copiedLink ? '✓ Copied!' : '🔗 Copy Link'}
           </button>
         </div>
 
-        {/* WhatsApp invite */}
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Share sheet */}
+        <button
+          onClick={share}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -73,19 +91,18 @@ export default function WaitingRoom({ roomId, playerColor, onBack }) {
             width: '100%',
             padding: '11px 16px',
             marginBottom: 24,
-            background: 'rgba(37,211,102,0.1)',
-            border: '1px solid rgba(37,211,102,0.4)',
+            background: 'rgba(200,168,75,0.08)',
+            border: '1px solid rgba(200,168,75,0.35)',
             borderRadius: 8,
-            color: '#25d366',
+            color: '#c8a84b',
             fontFamily: 'Playfair Display',
             fontSize: 14,
-            textDecoration: 'none',
             cursor: 'pointer',
             boxSizing: 'border-box',
           }}
         >
-          <span style={{ fontSize: 18 }}>💬</span> Invite via WhatsApp
-        </a>
+          <span style={{ fontSize: 18 }}>↗</span> Share Invite
+        </button>
 
         <p style={{ color: '#4a3820', fontFamily: 'Space Mono', fontSize: 11, lineHeight: 1.6, margin: 0 }}>
           Share the code with your opponent.<br />
@@ -117,4 +134,5 @@ const btnStyle = {
   fontFamily: 'Playfair Display',
   fontSize: 13,
   cursor: 'pointer',
+  transition: 'color 0.2s, border-color 0.2s',
 };

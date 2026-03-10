@@ -150,6 +150,7 @@ function PointTriangle({
               ref={isTopChecker ? topCheckerRef : null}
               draggable={canDrag}
               onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown(pointNumber); } : undefined}
+              onClick={canDrag ? (e) => e.stopPropagation() : undefined}
               onDragStart={canDrag ? (e) => {
                 if (topCheckerRef.current) e.dataTransfer.setDragImage(topCheckerRef.current, 15, 15);
                 e.stopPropagation();
@@ -470,7 +471,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
   const handleMouseDown = (pt) => { onSelectPoint(pt); };
-  const handleDragStart = (pt) => { dropOccurred.current = false; }; // selection already done in mousedown
+  const handleDragStart = () => { dropOccurred.current = false; }; // selection already done in mousedown
   const handleDrop      = (pt) => {
     dropOccurred.current = true;
     // Sound is played inside handleSelectPoint (with blot hit detection).
