@@ -123,6 +123,28 @@ export function playCheckerHit() {
   } catch (e) { /* silent fail */ }
 }
 
+// ─── NO VALID MOVES ──────────────────────────────────────────────────────────
+// Short descending two-tone beep: signals the player's turn is auto-skipped.
+export function playNoMoves() {
+  try {
+    const c = getCtx();
+    [440, 330].forEach((freq, i) => {
+      setTimeout(() => {
+        const osc  = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.18, c.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.22);
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start(c.currentTime);
+        osc.stop(c.currentTime + 0.22);
+      }, i * 160);
+    });
+  } catch (e) { /* silent fail */ }
+}
+
 // ─── WIN ─────────────────────────────────────────────────────────────────────
 export function playWin() {
   try {

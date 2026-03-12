@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Ably from 'ably';
-import { playDiceRoll, playCheckerMove, playCheckerHit } from '../utils/sounds';
+import { playDiceRoll, playCheckerMove, playCheckerHit, playNoMoves } from '../utils/sounds';
 import {
   createInitialState, rollDice, applyMove, skipTurn,
   getValidMoves, getMovableSources, hasAnyMove, canBearOff, opponent
@@ -178,8 +178,9 @@ export function useAblyGame() {
     const dice = rollDice();
     const newState = { ...gs, dice, phase: 'moving' };
 
-    // If no moves possible, show dice briefly then auto-skip
+    // If no moves possible, play beep, show dice briefly then auto-skip
     if (!hasAnyMove(newState, gs.currentPlayer)) {
+      playNoMoves();
       gameStateRef.current = newState;
       setGameState(newState);
       publishState(newState);
@@ -356,7 +357,8 @@ export function useAblyGame() {
 
   // ─── REMATCH ─────────────────────────────────────────────────────────────
   const handleRematch = useCallback(() => {
-    const newState = createInitialState();
+    const winner = gameStateRef.current?.winner;
+    const newState = { ...createInitialState(), ...(winner ? { currentPlayer: winner } : {}) };
     gameStateRef.current = newState;
     setGameState(newState);
     setStatus('playing');
