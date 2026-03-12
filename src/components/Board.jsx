@@ -275,8 +275,16 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
 }
 
 // ─── BEAR-OFF TRAY ────────────────────────────────────────────────────────────
-function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }) {
+// Single-colour tray — rendered once for each player's side.
+// `fromTop`: pieces stack downward (top tray); otherwise upward (bottom tray).
+function BearOffTray({ count, color, fromTop, isValidDest, onClick, onDrop, d }) {
   const { BEAROFF_W, POINT_H } = d;
+  const isWhite = color === 'white';
+  const chipBg  = isWhite
+    ? 'radial-gradient(#f5f0e8, #b8a87c)'
+    : 'radial-gradient(#c0392b, #5c0f0f)';
+  const chipBorder = isWhite ? '1px solid #a09060' : '1px solid #6b1010';
+
   return (
     <div
       data-point="bearoff"
@@ -288,25 +296,21 @@ function BearOffTray({ whiteCount, blackCount, isValidDest, onClick, onDrop, d }
         background: 'linear-gradient(180deg, #0f1a0a, #1a2a10, #0f1a0a)',
         border: isValidDest ? '2px solid #00e87a' : '2px solid #3a5a2a',
         borderRadius: 4, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: fromTop ? 'flex-start' : 'flex-end',
         cursor: isValidDest ? 'copy' : 'default',
         boxShadow: isValidDest ? '0 0 18px rgba(0,232,122,0.7), inset 0 0 12px rgba(0,232,122,0.2)' : 'none',
         transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
         overflow: 'hidden', flexShrink: 0, touchAction: 'none',
+        paddingTop: fromTop ? 4 : 0, paddingBottom: fromTop ? 0 : 4,
+        gap: 2,
       }}
     >
-      <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 3, gap: 2 }}>
-        {Array.from({ length: Math.min(blackCount, 8) }).map((_, i) => (
-          <div key={i} style={{ width: 24, height: 8, borderRadius: 4, background: 'radial-gradient(#c0392b, #5c0f0f)', border: '1px solid #6b1010', flexShrink: 0 }} />
-        ))}
-        {blackCount > 8 && <div style={{ color: '#ffd700', fontSize: 10, fontFamily: 'Space Mono' }}>{blackCount}</div>}
-      </div>
-      <div style={{ width: '80%', height: 1, background: '#3a5a2a' }} />
-      <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', justifyContent: 'flex-start', paddingBottom: 3, gap: 2 }}>
-        {Array.from({ length: Math.min(whiteCount, 8) }).map((_, i) => (
-          <div key={i} style={{ width: 24, height: 8, borderRadius: 4, background: 'radial-gradient(#f5f0e8, #b8a87c)', border: '1px solid #a09060', flexShrink: 0 }} />
-        ))}
-        {whiteCount > 8 && <div style={{ color: '#ffd700', fontSize: 10, fontFamily: 'Space Mono' }}>{whiteCount}</div>}
-      </div>
+      {count > 12 && (
+        <div style={{ color: '#ffd700', fontSize: 10, fontFamily: 'Space Mono', marginBottom: 2 }}>{count}</div>
+      )}
+      {Array.from({ length: Math.min(count, 12) }).map((_, i) => (
+        <div key={i} style={{ width: BEAROFF_W - 8, height: 7, borderRadius: 4, background: chipBg, border: chipBorder, flexShrink: 0 }} />
+      ))}
     </div>
   );
 }
@@ -488,6 +492,13 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const topRow    = flip ? [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1] : [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
   const bottomRow = flip ? [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] : [12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1];
 
+  // Each side's tray shows only its own colour's collected pieces.
+  // Bottom = current player's home side; top = opponent's side.
+  const myColor  = playerColor;                                      // e.g. 'white'
+  const oppColor = playerColor === 'white' ? 'black' : 'white';     // e.g. 'black'
+  const myBorneOff  = borneOff[myColor];
+  const oppBorneOff = borneOff[oppColor];
+
   return (
     <div
       ref={boardRef}
@@ -528,10 +539,8 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             {topRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={true} />)}
           </div>
           <BearOffTray
-            whiteCount={borneOff.white} blackCount={borneOff.black}
-            isValidDest={isBearOffDest && isMyTurn}
-            onClick={() => isBearOffDest && onSelectPoint('bearoff')}
-            onDrop={handleDrop}
+            count={oppBorneOff} color={oppColor} fromTop={true}
+            isValidDest={false}
             d={d}
           />
         </div>
@@ -568,7 +577,13 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
           <div style={{ display: 'flex', gap: POINT_GAP }}>
             {bottomRow.slice(6).map(pt => <PointTriangle {...ptProps(pt)} isTop={false} />)}
           </div>
-          <div style={{ width: d.BEAROFF_W, flexShrink: 0 }} />
+          <BearOffTray
+            count={myBorneOff} color={myColor} fromTop={false}
+            isValidDest={isBearOffDest && isMyTurn}
+            onClick={() => isBearOffDest && onSelectPoint('bearoff')}
+            onDrop={handleDrop}
+            d={d}
+          />
         </div>
       </div>
 
