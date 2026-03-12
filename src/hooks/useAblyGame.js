@@ -29,6 +29,33 @@ function findMovePath(gs, from, to, player) {
   return dfs(gs, from);
 }
 
+// Returns true only when canBearOff is true AND every available move is a bear-off (no board moves).
+function allMovesAreBearOff(state, player) {
+  if (!canBearOff(state, player)) return false;
+  const sources = getMovableSources(state, player);
+  if (sources.length === 0) return false;
+  for (const src of sources) {
+    for (const m of getValidMoves(state, src, player)) {
+      if (m.to >= 1 && m.to <= 24) return false; // a board move exists
+    }
+  }
+  return true;
+}
+
+// Greedily applies all bear-off moves until dice run out or turn ends.
+function autoCollectAll(state, player) {
+  let s = state;
+  while (s.phase === 'moving' && s.currentPlayer === player) {
+    const sources = getMovableSources(s, player);
+    if (sources.length === 0) break;
+    const from = sources[0];
+    const moves = getValidMoves(s, from, player);
+    if (moves.length === 0) break;
+    s = applyMove(s, from, moves[0].to, moves[0].die);
+  }
+  return s;
+}
+
 export function useAblyGame() {
   const [gameState, setGameState] = useState(null);
   const [playerColor, setPlayerColor] = useState(null); // 'white' | 'black'
@@ -39,6 +66,7 @@ export function useAblyGame() {
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [lastEvent, setLastEvent] = useState(null);
+  const [autoCollect, setAutoCollect] = useState(false);
 
   const ablyRef = useRef(null);
   const channelRef = useRef(null);
@@ -46,10 +74,12 @@ export function useAblyGame() {
   const playerColorRef = useRef(null);
   const gameStateRef = useRef(null);
   const moveHistory = useRef([]); // states before each move this turn
+  const autoCollectRef = useRef(false);
 
   // Keep refs in sync
   useEffect(() => { playerColorRef.current = playerColor; }, [playerColor]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  useEffect(() => { autoCollectRef.current = autoCollect; }, [autoCollect]);
 
   const initAbly = useCallback(async () => {
     const key = import.meta.env.VITE_ABLY_API_KEY;
@@ -191,6 +221,21 @@ export function useAblyGame() {
         setLastEvent({ type: 'no-moves' });
         publishState(skipped);
       }, 1200);
+      return;
+    }
+
+    // Auto-collect: toggle on and every available move is a bear-off
+    if (autoCollectRef.current && allMovesAreBearOff(newState, gs.currentPlayer)) {
+      gameStateRef.current = newState;
+      setGameState(newState);
+      publishState(newState); // show dice briefly before collecting
+      setTimeout(() => {
+        const final = autoCollectAll(newState, gs.currentPlayer);
+        gameStateRef.current = final;
+        setGameState(final);
+        publishState(final);
+        if (final.phase === 'ended') setStatus('ended');
+      }, 700);
       return;
     }
 
@@ -418,6 +463,8 @@ export function useAblyGame() {
     isMyTurn,
     bearingOff,
     canUndo,
+    autoCollect,
+    setAutoCollect,
     createRoom,
     joinRoom,
     handleRoll,

@@ -126,6 +126,7 @@ export default function App() {
     selectedPoint, validDestinations, movableSources, combinedDests,
     opponentConnected, chatMessages, isMyTurn,
     canUndo, handleUndo,
+    autoCollect, setAutoCollect, bearingOff,
     createRoom, joinRoom, handleRoll, handleSelectPoint, handleDirectMove,
     sendChat, handleRematch,
   } = useAblyGame();
@@ -201,6 +202,9 @@ export default function App() {
           boardH={portrait ? undefined : LANDSCAPE_BH}
           canUndo={canUndo}
           onUndo={handleUndo}
+          bearingOff={bearingOff}
+          autoCollect={autoCollect}
+          onToggleAutoCollect={() => setAutoCollect(v => !v)}
         />
       </div>
     </div>

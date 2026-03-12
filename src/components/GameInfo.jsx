@@ -93,6 +93,7 @@ export default function GameInfo({
   chatMessages, onSendChat, onRematch,
   opponentConnected, portrait, boardH,
   canUndo, onUndo,
+  bearingOff, autoCollect, onToggleAutoCollect,
 }) {
   if (!gameState) return null;
   const { dice, phase, currentPlayer, winner, borneOff, bar } = gameState;
@@ -237,6 +238,34 @@ export default function GameInfo({
         {phase === 'moving' && isMyTurn && !canUndo && (
           <div style={{ marginTop: 8, color: '#7a6030', fontSize: 11, fontFamily: 'Space Mono', textAlign: 'center' }}>
             Click or drag a checker to move
+          </div>
+        )}
+        {bearingOff && (
+          <div
+            onClick={onToggleAutoCollect}
+            style={{
+              marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
+              cursor: 'pointer', userSelect: 'none',
+            }}
+          >
+            {/* Toggle track */}
+            <div style={{
+              width: 32, height: 17, borderRadius: 9,
+              background: autoCollect ? 'rgba(200,168,75,0.75)' : 'rgba(255,255,255,0.1)',
+              border: autoCollect ? '1px solid #c8a84b' : '1px solid rgba(255,255,255,0.15)',
+              position: 'relative', flexShrink: 0, transition: 'background 0.2s, border 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2,
+                left: autoCollect ? 15 : 2,
+                width: 11, height: 11, borderRadius: '50%',
+                background: autoCollect ? '#1a0f02' : 'rgba(255,255,255,0.35)',
+                transition: 'left 0.2s',
+              }} />
+            </div>
+            <span style={{ fontSize: 10, fontFamily: 'Space Mono', color: autoCollect ? '#c8a84b' : '#5a4020', letterSpacing: 0.5 }}>
+              Auto-collect
+            </span>
           </div>
         )}
       </div>
