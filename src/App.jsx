@@ -145,7 +145,10 @@ export default function App() {
   }, []);
 
   if (status === 'idle')    return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />;
-  if (status === 'waiting') return <WaitingRoom roomId={roomId} playerColor={playerColor} onBack={() => window.location.reload()} />;
+  if (status === 'waiting') return <WaitingRoom roomId={roomId} playerColor={playerColor} onBack={() => {
+    window.history.replaceState({}, '', window.location.pathname);
+    window.location.reload();
+  }} />;
 
   return (
     <div style={{
