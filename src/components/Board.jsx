@@ -15,6 +15,28 @@ const L = {
 // Kept for any direct references below
 const POINT_GAP = 2;
 
+// Creates a circular canvas for use as an HTML5 drag image (avoids rectangular ghost)
+function makeDragCanvas(color, size) {
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  c.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d');
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+  const g = ctx.createRadialGradient(size * 0.35, size * 0.35, 0, size / 2, size / 2, size / 2);
+  if (color === 'white') {
+    g.addColorStop(0, '#f5f0e8'); g.addColorStop(0.5, '#d4c8a8'); g.addColorStop(1, '#b8a87c');
+  } else {
+    g.addColorStop(0, '#c0392b'); g.addColorStop(0.5, '#8b1a1a'); g.addColorStop(1, '#5c0f0f');
+  }
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = color === 'white' ? '#a09060' : '#6b1010';
+  ctx.lineWidth = 2; ctx.stroke();
+  setTimeout(() => document.body.removeChild(c), 0);
+  return c;
+}
+
 // ─── POINT TRIANGLE ──────────────────────────────────────────────────────────
 function PointTriangle({
   pointNumber, isTop, color, checkers,
@@ -241,8 +263,10 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
             <div key={i} ref={isTopChecker ? topBlackRef : null}
               draggable={canDrag}
               onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
+              onClick={canDrag ? (e) => e.stopPropagation() : undefined}
               onDragStart={canDrag ? (e) => {
-                if (topBlackRef.current) e.dataTransfer.setDragImage(topBlackRef.current, 14, 14);
+                const c = makeDragCanvas('black', BAR_CHECKER);
+                e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
                 e.stopPropagation(); onDragStart && onDragStart('bar');
               } : undefined}
               style={{ ...cs('black'), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
@@ -261,8 +285,10 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
             <div key={i} ref={isTopChecker ? topWhiteRef : null}
               draggable={canDrag}
               onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
+              onClick={canDrag ? (e) => e.stopPropagation() : undefined}
               onDragStart={canDrag ? (e) => {
-                if (topWhiteRef.current) e.dataTransfer.setDragImage(topWhiteRef.current, 14, 14);
+                const c = makeDragCanvas('white', BAR_CHECKER);
+                e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
                 e.stopPropagation(); onDragStart && onDragStart('bar');
               } : undefined}
               style={{ ...cs('white'), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
@@ -325,6 +351,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
 
   // ── Desktop drag ──────────────────────────────────────────────────────────
   const dropOccurred = useRef(false);
+  const dragSrcRef   = useRef(null); // source point of current desktop drag
 
   // ── Touch drag — all live values via refs (no stale closures) ────────────
   const boardRef          = useRef(null);
@@ -474,14 +501,27 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const ptColor          = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
-  const handleMouseDown = (pt) => { onSelectPoint(pt); };
-  const handleDragStart = () => { dropOccurred.current = false; }; // selection already done in mousedown
+  const handleMouseDown = (pt) => { dragSrcRef.current = pt; onSelectPoint(pt); };
+  const handleDragStart = () => { dropOccurred.current = false; };
   const handleDrop      = (pt) => {
     dropOccurred.current = true;
-    // Sound is played inside handleSelectPoint (with blot hit detection).
-    onSelectPoint(pt);
+    const src = dragSrcRef.current;
+    dragSrcRef.current = null;
+    // Use onDirectMove (ref-based, bypasses selectedPoint) so that drops work
+    // even when the piece was already selected before the drag started — in that
+    // case onMouseDown deselects it (selectedPoint===pt triggers the deselect
+    // branch), but dragSrcRef still knows where the drag came from.
+    if (src !== null) {
+      onDirectMove(src, pt);
+    } else {
+      onSelectPoint(pt);
+    }
   };
-  const handleDragEnd = () => { if (!dropOccurred.current) onSelectPoint(null); dropOccurred.current = false; };
+  const handleDragEnd = () => {
+    dragSrcRef.current = null;
+    if (!dropOccurred.current) onSelectPoint(null);
+    dropOccurred.current = false;
+  };
 
   const ptProps = (pt) => ({
     key: pt, pointNumber: pt, color: ptColor(pt), checkers: getCheckers(pt),
