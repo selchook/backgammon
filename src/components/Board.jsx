@@ -303,13 +303,20 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
 // ─── BEAR-OFF TRAY ────────────────────────────────────────────────────────────
 // Single-colour tray — rendered once for each player's side.
 // `fromTop`: pieces stack downward (top tray); otherwise upward (bottom tray).
-function BearOffTray({ count, color, fromTop, isValidDest, onClick, onDrop, d }) {
+function BearOffTray({ count, color, fromTop, isValidDest, isCombinedDest, onClick, onDrop, d }) {
   const { BEAROFF_W, POINT_H } = d;
   const isWhite = color === 'white';
   const chipBg  = isWhite
     ? 'radial-gradient(#f5f0e8, #b8a87c)'
     : 'radial-gradient(#c0392b, #5c0f0f)';
   const chipBorder = isWhite ? '1px solid #a09060' : '1px solid #6b1010';
+
+  const borderColor = isValidDest ? '#00e87a' : isCombinedDest ? '#40a0ff' : '#3a5a2a';
+  const boxShadow   = isValidDest
+    ? '0 0 18px rgba(0,232,122,0.7), inset 0 0 12px rgba(0,232,122,0.2)'
+    : isCombinedDest
+      ? '0 0 14px rgba(64,160,255,0.6), inset 0 0 8px rgba(64,160,255,0.15)'
+      : 'none';
 
   return (
     <div
@@ -320,11 +327,11 @@ function BearOffTray({ count, color, fromTop, isValidDest, onClick, onDrop, d })
       style={{
         width: BEAROFF_W, height: POINT_H,
         background: 'linear-gradient(180deg, #0f1a0a, #1a2a10, #0f1a0a)',
-        border: isValidDest ? '2px solid #00e87a' : '2px solid #3a5a2a',
+        border: `2px ${isCombinedDest && !isValidDest ? 'dashed' : 'solid'} ${borderColor}`,
         borderRadius: 4, display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: fromTop ? 'flex-start' : 'flex-end',
-        cursor: isValidDest ? 'copy' : 'default',
-        boxShadow: isValidDest ? '0 0 18px rgba(0,232,122,0.7), inset 0 0 12px rgba(0,232,122,0.2)' : 'none',
+        cursor: (isValidDest || isCombinedDest) ? 'copy' : 'default',
+        boxShadow,
         transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
         overflow: 'hidden', flexShrink: 0, touchAction: 'none',
         paddingTop: fromTop ? 4 : 0, paddingBottom: fromTop ? 0 : 4,
@@ -498,6 +505,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
   const isCombinedDest   = (pt) => !isValidDest(pt) && combinedDests.includes(pt);
   const isMovableSrc     = (pt) => movableSources.includes(pt);
   const isBearOffDest    = validDestinations.some(d => d.to === 0 || d.to === 25);
+  const isCombinedBearOff = !isBearOffDest && combinedDests.includes('bearoff');
   const ptColor          = (pt) => (pt % 2 === 0) ? 'light' : 'dark';
 
   // ── Desktop drag handlers ─────────────────────────────────────────────────
@@ -620,7 +628,8 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
           <BearOffTray
             count={myBorneOff} color={myColor} fromTop={false}
             isValidDest={isBearOffDest && isMyTurn}
-            onClick={() => isBearOffDest && onSelectPoint('bearoff')}
+            isCombinedDest={isCombinedBearOff && isMyTurn}
+            onClick={() => (isBearOffDest || isCombinedBearOff) && onSelectPoint('bearoff')}
             onDrop={handleDrop}
             d={d}
           />

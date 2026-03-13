@@ -279,12 +279,32 @@ export function useAblyGame() {
       return;
     }
 
-    // Multi-die combined move: tap a blue-ring destination
+    // Multi-die combined move: tap a blue-ring destination (board point)
     if (selectedPoint !== null && typeof point === 'number') {
       const path = findMovePath(gs, selectedPoint, point, gs.currentPlayer);
       if (path && path.length >= 2) {
         const isHit = gs.points[point]?.color === opponent(gs.currentPlayer) && gs.points[point].count === 1;
         isHit ? playCheckerHit() : playCheckerMove();
+        moveHistory.current.push(gs);
+        let state = gs;
+        for (const step of path) state = applyMove(state, step.from, step.to, step.die);
+        gameStateRef.current = state;
+        setGameState(state);
+        setSelectedPoint(null);
+        setValidDestinations([]);
+        publishState(state);
+        if (state.phase === 'ended') setStatus('ended');
+        return;
+      }
+    }
+
+    // Multi-die combined bear-off: tap the bear-off tray when no single die reaches it
+    // e.g. piece on 5 with dice [2,3] → move 5→3 then bear off 3 with die 3
+    if (selectedPoint !== null && point === 'bearoff') {
+      const bearPt = gs.currentPlayer === 'white' ? 0 : 25;
+      const path = findMovePath(gs, selectedPoint, bearPt, gs.currentPlayer);
+      if (path && path.length >= 2) {
+        playCheckerMove();
         moveHistory.current.push(gs);
         let state = gs;
         for (const step of path) state = applyMove(state, step.from, step.to, step.die);
@@ -344,12 +364,30 @@ export function useAblyGame() {
     );
 
     if (!match) {
-      // Try combined multi-dice move (drag to blue-ring destination)
+      // Try combined multi-dice move (drag to blue-ring board destination)
       if (typeof to === 'number') {
         const path = findMovePath(gs, from, to, player);
         if (path && path.length >= 2) {
           const isHit = gs.points[to]?.color === opponent(player) && gs.points[to].count === 1;
           isHit ? playCheckerHit() : playCheckerMove();
+          moveHistory.current.push(gs);
+          let state = gs;
+          for (const step of path) state = applyMove(state, step.from, step.to, step.die);
+          gameStateRef.current = state;
+          setGameState(state);
+          setSelectedPoint(null);
+          setValidDestinations([]);
+          publishState(state);
+          if (state.phase === 'ended') setStatus('ended');
+          return;
+        }
+      }
+      // Try combined multi-dice bear-off (e.g. piece on 5, dice [2,3] → 5→3 then 3→off)
+      if (to === 'bearoff') {
+        const bearPt = player === 'white' ? 0 : 25;
+        const path = findMovePath(gs, from, bearPt, player);
+        if (path && path.length >= 2) {
+          playCheckerMove();
           moveHistory.current.push(gs);
           let state = gs;
           for (const step of path) state = applyMove(state, step.from, step.to, step.die);
@@ -440,6 +478,12 @@ export function useAblyGame() {
       const after = applyMove(gameState, selectedPoint, fd.to, fd.die);
       if (after.phase !== 'moving' || after.currentPlayer !== playerColor) continue;
       explore(after, fd.to);
+    }
+    // Check if a multi-die path to bear-off exists (e.g. piece on 5, dice [2,3] → 5→3→off)
+    const bearPt = playerColor === 'white' ? 0 : 25;
+    if (!singleDests.has(bearPt) && canBearOff(gameState, playerColor)) {
+      const path = findMovePath(gameState, selectedPoint, bearPt, playerColor);
+      if (path && path.length >= 2) combined.add('bearoff');
     }
     return [...combined];
   })();
