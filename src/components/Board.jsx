@@ -219,14 +219,20 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
-// Each colour's hit pieces sit on their own half: black at the top, white at the bottom.
-function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, isMyTurn, d }) {
+// playerColor's pieces always sit at the bottom half (near their home side).
+// Opponent's pieces sit at the top half.
+function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, playerColor, isMyTurn, d }) {
   const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
   const isMovable  = isMyTurn && myCount > 0;
   const halfH      = Math.floor(POINT_H / 2);
+  // Bottom half always shows playerColor's pieces; top half shows opponent's.
+  const bottomColor = playerColor;
+  const topColor    = playerColor === 'white' ? 'black' : 'white';
+  const bottomCount = playerColor === 'white' ? whiteCount : blackCount;
+  const topCount    = playerColor === 'white' ? blackCount : whiteCount;
 
   const cs = (color) => ({
     width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%', flexShrink: 0,
@@ -284,22 +290,22 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
         flexShrink: 0, zIndex: 5, touchAction: 'none',
       }}
     >
-      {/* Black pieces — top half, stack top-down (closest to board centre) */}
+      {/* Opponent's pieces — top half, stack top-down */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: halfH,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'flex-start', paddingTop: 4, gap: 3, overflow: 'hidden',
       }}>
-        {renderGroup('black', blackCount)}
+        {renderGroup(topColor, topCount)}
       </div>
 
-      {/* White pieces — bottom half, stack bottom-up (closest to board centre) */}
+      {/* Player's own pieces — bottom half, stack bottom-up (closest to board centre) */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: halfH,
         display: 'flex', flexDirection: 'column-reverse', alignItems: 'center',
         justifyContent: 'flex-start', paddingBottom: 4, gap: 3, overflow: 'hidden',
       }}>
-        {renderGroup('white', whiteCount)}
+        {renderGroup(bottomColor, bottomCount)}
       </div>
     </div>
   );
@@ -585,7 +591,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             selectedPoint={selectedPoint}
             onClickBar={() => onSelectPoint('bar')}
             onDragStart={handleDragStart} onMouseDown={handleMouseDown} onDrop={handleDrop}
-            currentPlayer={currentPlayer} isMyTurn={isMyTurn}
+            currentPlayer={currentPlayer} playerColor={playerColor} isMyTurn={isMyTurn}
             d={d}
           />
           <div style={{ display: 'flex', gap: POINT_GAP }}>
