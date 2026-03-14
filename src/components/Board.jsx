@@ -219,23 +219,22 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
-// playerColor's pieces always sit at the bottom half (near their home side).
-// Opponent's pieces sit at the top half.
+// Two side-by-side columns: white on the left, black on the right.
+// White pieces stack from the bottom up; black pieces stack from the top down.
+// The centre-adjacent piece in each column is the draggable one.
 function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, isMyTurn, d }) {
   const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
   const isMovable  = isMyTurn && myCount > 0;
-  const halfH      = Math.floor(POINT_H / 2);
-  // Bottom half = active (current) player's hit pieces; top half = opponent's.
-  const bottomColor = currentPlayer;
-  const topColor    = currentPlayer === 'white' ? 'black' : 'white';
-  const bottomCount = currentPlayer === 'white' ? whiteCount : blackCount;
-  const topCount    = currentPlayer === 'white' ? blackCount : whiteCount;
+
+  // Each column occupies half the bar width; checker shrinks to fit.
+  const colW       = Math.floor(BAR_W / 2);
+  const colChecker = Math.max(colW - 4, 12);
 
   const cs = (color) => ({
-    width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%', flexShrink: 0,
+    width: colChecker, height: colChecker, borderRadius: '50%', flexShrink: 0,
     background: color === 'white'
       ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
       : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
@@ -243,14 +242,12 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
     boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
   });
 
-  // Renders up to 5 visible checkers + optional count badge for one colour.
-  const renderGroup = (color, count) => {
+  // Renders one column. stackFromBottom=true → column-reverse (white); false → column (black).
+  // The last piece (i=shown-1) is always the centre-adjacent draggable piece.
+  const renderCol = (color, count, stackFromBottom) => {
     const shown      = Math.min(count, 5);
     const canDragCol = isMovable && myColor === color;
     const pieces = Array.from({ length: shown }).map((_, i) => {
-      // In column layout     : piece 0 is at top, last (shown-1) is at bottom (closest to centre).
-      // In column-reverse    : piece 0 is at bottom, last (shown-1) is at top (closest to centre).
-      // Either way isTopChecker = last shown = draggable top-of-pile piece.
       const isTopChecker = i === shown - 1;
       const canDrag      = canDragCol && isTopChecker;
       return (
@@ -267,11 +264,27 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
         />
       );
     });
-    // Badge goes AFTER pieces so it appears at the centre-side end (column: bottom; column-reverse: top).
     const badge = count > 5
       ? <div key="badge" style={{ color: '#ffd700', fontSize: 9, fontFamily: 'Space Mono', fontWeight: 700, flexShrink: 0 }}>{count}</div>
       : null;
-    return [...pieces, badge];
+    return (
+      <div style={{
+        position: 'absolute',
+        top: 0, bottom: 0,
+        width: colW,
+        left: color === 'white' ? 0 : colW,
+        display: 'flex',
+        flexDirection: stackFromBottom ? 'column-reverse' : 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingTop: stackFromBottom ? 0 : 4,
+        paddingBottom: stackFromBottom ? 4 : 0,
+        gap: 2,
+        overflow: 'hidden',
+      }}>
+        {[...pieces, badge]}
+      </div>
+    );
   };
 
   return (
@@ -290,23 +303,10 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
         flexShrink: 0, zIndex: 5, touchAction: 'none',
       }}
     >
-      {/* Opponent's pieces — top half, stack top-down */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: halfH,
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'flex-start', paddingTop: 4, gap: 3, overflow: 'hidden',
-      }}>
-        {renderGroup(topColor, topCount)}
-      </div>
-
-      {/* Player's own pieces — bottom half, stack bottom-up (closest to board centre) */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: halfH,
-        display: 'flex', flexDirection: 'column-reverse', alignItems: 'center',
-        justifyContent: 'flex-start', paddingBottom: 4, gap: 3, overflow: 'hidden',
-      }}>
-        {renderGroup(bottomColor, bottomCount)}
-      </div>
+      {/* White column — left side, stacks from bottom up */}
+      {renderCol('white', whiteCount, true)}
+      {/* Black column — right side, stacks from top down */}
+      {renderCol('black', blackCount, false)}
     </div>
   );
 }
