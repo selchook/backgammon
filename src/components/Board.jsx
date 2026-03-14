@@ -221,18 +221,18 @@ function PointTriangle({
 // ─── BAR ─────────────────────────────────────────────────────────────────────
 // playerColor's pieces always sit at the bottom half (near their home side).
 // Opponent's pieces sit at the top half.
-function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, isMyTurn, d }) {
+function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, playerColor, isMyTurn, d }) {
   const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
   const isMovable  = isMyTurn && myCount > 0;
   const halfH      = Math.floor(POINT_H / 2);
-  // Bottom half = active (current) player's hit pieces; top half = opponent's.
-  const bottomColor = currentPlayer;
-  const topColor    = currentPlayer === 'white' ? 'black' : 'white';
-  const bottomCount = currentPlayer === 'white' ? whiteCount : blackCount;
-  const topCount    = currentPlayer === 'white' ? blackCount : whiteCount;
+  // Bottom half always shows playerColor's pieces; top half shows opponent's.
+  const bottomColor = playerColor;
+  const topColor    = playerColor === 'white' ? 'black' : 'white';
+  const bottomCount = playerColor === 'white' ? whiteCount : blackCount;
+  const topCount    = playerColor === 'white' ? blackCount : whiteCount;
 
   const cs = (color) => ({
     width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%', flexShrink: 0,
@@ -591,7 +591,7 @@ export default function Board({ gameState, selectedPoint, validDestinations, mov
             selectedPoint={selectedPoint}
             onClickBar={() => onSelectPoint('bar')}
             onDragStart={handleDragStart} onMouseDown={handleMouseDown} onDrop={handleDrop}
-            currentPlayer={currentPlayer} isMyTurn={isMyTurn}
+            currentPlayer={currentPlayer} playerColor={playerColor} isMyTurn={isMyTurn}
             d={d}
           />
           <div style={{ display: 'flex', gap: POINT_GAP }}>
