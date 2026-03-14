@@ -303,7 +303,7 @@ export function useAblyGame() {
     if (selectedPoint !== null && point === 'bearoff') {
       const bearPt = gs.currentPlayer === 'white' ? 0 : 25;
       const path = findMovePath(gs, selectedPoint, bearPt, gs.currentPlayer);
-      if (path && path.length >= 2) {
+      if (path && path.length >= 1) {
         playCheckerMove();
         moveHistory.current.push(gs);
         let state = gs;
@@ -386,7 +386,7 @@ export function useAblyGame() {
       if (to === 'bearoff') {
         const bearPt = player === 'white' ? 0 : 25;
         const path = findMovePath(gs, from, bearPt, player);
-        if (path && path.length >= 2) {
+        if (path && path.length >= 1) {
           playCheckerMove();
           moveHistory.current.push(gs);
           let state = gs;
@@ -483,7 +483,7 @@ export function useAblyGame() {
     const bearPt = playerColor === 'white' ? 0 : 25;
     if (!singleDests.has(bearPt) && canBearOff(gameState, playerColor)) {
       const path = findMovePath(gameState, selectedPoint, bearPt, playerColor);
-      if (path && path.length >= 2) combined.add('bearoff');
+      if (path && path.length >= 1) combined.add('bearoff');
     }
     return [...combined];
   })();

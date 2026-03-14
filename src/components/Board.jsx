@@ -163,8 +163,9 @@ function PointTriangle({
         left: 0, right: 0, height: '100%',
         pointerEvents: 'none',
       }}>
-        {checkers.map((c, i) => {
-          const isTopChecker = i === checkers.length - 1;
+        {checkers.slice(0, 6).map((c, i) => {
+          const shown = Math.min(checkers.length, 6);
+          const isTopChecker = i === shown - 1;
           const canDrag = isMovable && isTopChecker;
           return (
             <div
@@ -200,10 +201,10 @@ function PointTriangle({
           );
         })}
 
-        {checkers.length > 5 && (
+        {checkers.length > 6 && (
           <div style={{
             position: 'absolute',
-            [isTop ? 'top' : 'bottom']: 4 * STEP + 6,
+            [isTop ? 'top' : 'bottom']: 5 * STEP + 6,
             left: '50%',
             transform: 'translateX(-50%)',
             background: '#1a1a1a', color: '#ffd700',
@@ -218,23 +219,54 @@ function PointTriangle({
 }
 
 // ─── BAR ─────────────────────────────────────────────────────────────────────
+// Each colour's hit pieces sit on their own half: black at the top, white at the bottom.
 function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, isMyTurn, d }) {
   const { BAR_W, BAR_CHECKER, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
   const isMovable  = isMyTurn && myCount > 0;
-  const topBlackRef = useRef(null);
-  const topWhiteRef = useRef(null);
+  const halfH      = Math.floor(POINT_H / 2);
 
   const cs = (color) => ({
-    width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%',
+    width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%', flexShrink: 0,
     background: color === 'white'
       ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
       : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
     border: color === 'white' ? '2px solid #a09060' : '2px solid #6b1010',
     boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
   });
+
+  // Renders up to 5 visible checkers + optional count badge for one colour.
+  const renderGroup = (color, count) => {
+    const shown      = Math.min(count, 5);
+    const canDragCol = isMovable && myColor === color;
+    const pieces = Array.from({ length: shown }).map((_, i) => {
+      // In column layout     : piece 0 is at top, last (shown-1) is at bottom (closest to centre).
+      // In column-reverse    : piece 0 is at bottom, last (shown-1) is at top (closest to centre).
+      // Either way isTopChecker = last shown = draggable top-of-pile piece.
+      const isTopChecker = i === shown - 1;
+      const canDrag      = canDragCol && isTopChecker;
+      return (
+        <div key={i}
+          draggable={canDrag}
+          onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
+          onClick={canDrag ? (e) => e.stopPropagation() : undefined}
+          onDragStart={canDrag ? (e) => {
+            const c = makeDragCanvas(color, BAR_CHECKER);
+            e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
+            e.stopPropagation(); onDragStart && onDragStart('bar');
+          } : undefined}
+          style={{ ...cs(color), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
+        />
+      );
+    });
+    // Badge goes AFTER pieces so it appears at the centre-side end (column: bottom; column-reverse: top).
+    const badge = count > 5
+      ? <div key="badge" style={{ color: '#ffd700', fontSize: 9, fontFamily: 'Space Mono', fontWeight: 700, flexShrink: 0 }}>{count}</div>
+      : null;
+    return [...pieces, badge];
+  };
 
   return (
     <div
@@ -243,58 +275,31 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
       onDragOver={e => e.preventDefault()}
       onDrop={e => { e.preventDefault(); onDrop && onDrop('bar'); }}
       style={{
-        width: BAR_W, height: POINT_H,
+        width: BAR_W, height: POINT_H, position: 'relative',
         background: 'linear-gradient(180deg, #1a0f05 0%, #2a1a08 50%, #1a0f05 100%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 10,
         borderLeft: '3px solid #6b4a1a', borderRight: '3px solid #6b4a1a',
         cursor: isMovable ? 'grab' : 'default',
         boxShadow: isSelected ? 'inset 0 0 20px rgba(255,215,0,0.4)' : 'inset 0 0 10px rgba(0,0,0,0.5)',
         transition: 'box-shadow 0.2s ease',
-        flexShrink: 0, position: 'relative', zIndex: 5,
-        touchAction: 'none',
+        flexShrink: 0, zIndex: 5, touchAction: 'none',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-        {Array.from({ length: blackCount }).map((_, i) => {
-          const isTopChecker = i === blackCount - 1;
-          const canDrag = isMovable && myColor === 'black' && isTopChecker;
-          return (
-            <div key={i} ref={isTopChecker ? topBlackRef : null}
-              draggable={canDrag}
-              onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
-              onClick={canDrag ? (e) => e.stopPropagation() : undefined}
-              onDragStart={canDrag ? (e) => {
-                const c = makeDragCanvas('black', BAR_CHECKER);
-                e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
-                e.stopPropagation(); onDragStart && onDragStart('bar');
-              } : undefined}
-              style={{ ...cs('black'), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
-            />
-          );
-        })}
+      {/* Black pieces — top half, stack top-down (closest to board centre) */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: halfH,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'flex-start', paddingTop: 4, gap: 3, overflow: 'hidden',
+      }}>
+        {renderGroup('black', blackCount)}
       </div>
-      {(blackCount > 0 || whiteCount > 0) && (
-        <div style={{ width: 34, height: 2, background: '#6b4a1a', opacity: 0.5 }} />
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-        {Array.from({ length: whiteCount }).map((_, i) => {
-          const isTopChecker = i === whiteCount - 1;
-          const canDrag = isMovable && myColor === 'white' && isTopChecker;
-          return (
-            <div key={i} ref={isTopChecker ? topWhiteRef : null}
-              draggable={canDrag}
-              onMouseDown={canDrag ? (e) => { e.stopPropagation(); onMouseDown && onMouseDown('bar'); } : undefined}
-              onClick={canDrag ? (e) => e.stopPropagation() : undefined}
-              onDragStart={canDrag ? (e) => {
-                const c = makeDragCanvas('white', BAR_CHECKER);
-                e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
-                e.stopPropagation(); onDragStart && onDragStart('bar');
-              } : undefined}
-              style={{ ...cs('white'), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
-            />
-          );
-        })}
+
+      {/* White pieces — bottom half, stack bottom-up (closest to board centre) */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: halfH,
+        display: 'flex', flexDirection: 'column-reverse', alignItems: 'center',
+        justifyContent: 'flex-start', paddingBottom: 4, gap: 3, overflow: 'hidden',
+      }}>
+        {renderGroup('white', whiteCount)}
       </div>
     </div>
   );
