@@ -21,6 +21,7 @@ function findMovePath(gs, from, to, player) {
       if (m.to < 1 || m.to > 24) continue; // can't continue from off-board
       const next = applyMove(state, curPt, m.to, m.die);
       if (next.phase !== 'moving' || next.currentPlayer !== player) continue;
+      if (next.bar[player] > 0) continue; // must clear bar before continuing a board path
       const rest = dfs(next, m.to);
       if (rest) return [{ from: curPt, to: m.to, die: m.die }, ...rest];
     }
@@ -477,6 +478,7 @@ export function useAblyGame() {
       if (fd.to < 1 || fd.to > 24) continue;
       const after = applyMove(gameState, selectedPoint, fd.to, fd.die);
       if (after.phase !== 'moving' || after.currentPlayer !== playerColor) continue;
+      if (after.bar[playerColor] > 0) continue; // remaining bar pieces must be entered first
       explore(after, fd.to);
     }
     // Check if a multi-die path to bear-off exists (e.g. piece on 5, dice [2,3] → 5→3→off)
