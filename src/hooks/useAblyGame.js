@@ -452,6 +452,34 @@ export function useAblyGame() {
     channelRef.current?.publish('game-start', { state: newState });
   }, [publishState]);
 
+  // ─── BAR BLOCKED: auto-skip ───────────────────────────────────────────────
+  // Safety net: if the local player is in 'moving' phase with bar pieces but
+  // all entry points are blocked (hasAnyMove = false), auto-skip their turn.
+  // This covers mid-turn cases (e.g. one bar piece entered, remaining die can't
+  // enter the second) AND any state-sync edge case where the skip wasn't applied.
+  useEffect(() => {
+    if (!gameState || gameState.phase !== 'moving') return;
+    if (gameState.currentPlayer !== playerColor) return;
+    if (gameState.bar[playerColor] === 0) return;
+    if (hasAnyMove(gameState, playerColor)) return;
+
+    playNoMoves();
+    const captured = gameState;
+    const timer = setTimeout(() => {
+      // Guard: only apply if state hasn't changed while waiting
+      if (gameStateRef.current !== captured) return;
+      const skipped = skipTurn(captured);
+      gameStateRef.current = skipped;
+      setGameState(skipped);
+      setSelectedPoint(null);
+      setValidDestinations([]);
+      setLastEvent({ type: 'no-moves' });
+      publishState(skipped);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [gameState, playerColor, publishState]);
+
   // ─── COMPUTED ─────────────────────────────────────────────────────────────
   const movableSources = gameState && gameState.phase === 'moving' && gameState.currentPlayer === playerColor
     ? getMovableSources(gameState, playerColor)
