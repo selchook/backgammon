@@ -5,12 +5,12 @@ import { useRef, useEffect } from 'react';
 // Portrait board: H(672) > W(586)
 const P = {
   POINT_W: 36, POINT_H: 290, CHECKER: 30, STEP: 20,
-  BAR_W: 50, BAR_CHECKER: 28, BEAROFF_W: 44, POINT_GAP: 2,
+  BAR_W: 50, BAR_CHECKER: 28, BAR_STEP: 18, BEAROFF_W: 44, POINT_GAP: 2,
 };
 // Landscape board: W(~800) > H(~450)
 const L = {
   POINT_W: 52, POINT_H: 180, CHECKER: 40, STEP: 26,
-  BAR_W: 62, BAR_CHECKER: 38, BEAROFF_W: 56, POINT_GAP: 2,
+  BAR_W: 62, BAR_CHECKER: 38, BAR_STEP: 25, BEAROFF_W: 56, POINT_GAP: 2,
 };
 // Kept for any direct references below
 const POINT_GAP = 2;
@@ -222,7 +222,7 @@ function PointTriangle({
 // playerColor's pieces always sit at the bottom half (near their home side).
 // Opponent's pieces sit at the top half.
 function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, onMouseDown, onDrop, currentPlayer, playerColor, isMyTurn, d }) {
-  const { BAR_W, BAR_CHECKER, POINT_H } = d;
+  const { BAR_W, BAR_CHECKER, BAR_STEP, POINT_H } = d;
   const isSelected = selectedPoint === 'bar';
   const myColor    = currentPlayer;
   const myCount    = myColor === 'white' ? whiteCount : blackCount;
@@ -235,7 +235,7 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
   const topCount    = playerColor === 'white' ? blackCount : whiteCount;
 
   const cs = (color) => ({
-    width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%', flexShrink: 0,
+    width: BAR_CHECKER, height: BAR_CHECKER, borderRadius: '50%',
     background: color === 'white'
       ? 'radial-gradient(circle at 35% 35%, #f5f0e8, #d4c8a8, #b8a87c)'
       : 'radial-gradient(circle at 35% 35%, #c0392b, #8b1a1a, #5c0f0f)',
@@ -243,14 +243,13 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
     boxShadow: '0 2px 5px rgba(0,0,0,0.6)',
   });
 
-  // Renders up to 5 visible checkers + optional count badge for one colour.
-  const renderGroup = (color, count) => {
-    const shown      = Math.min(count, 5);
+  // Renders overlapping checkers stacked from the outer edge toward the centre,
+  // plus a count badge when count exceeds the max shown — mirrors point-cone behaviour.
+  const MAX_SHOWN = 5;
+  const renderGroup = (color, count, isBottom) => {
+    const shown      = Math.min(count, MAX_SHOWN);
     const canDragCol = isMovable && myColor === color;
     const pieces = Array.from({ length: shown }).map((_, i) => {
-      // In column layout     : piece 0 is at top, last (shown-1) is at bottom (closest to centre).
-      // In column-reverse    : piece 0 is at bottom, last (shown-1) is at top (closest to centre).
-      // Either way isTopChecker = last shown = draggable top-of-pile piece.
       const isTopChecker = i === shown - 1;
       const canDrag      = canDragCol && isTopChecker;
       return (
@@ -263,13 +262,30 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
             e.dataTransfer.setDragImage(c, BAR_CHECKER / 2, BAR_CHECKER / 2);
             e.stopPropagation(); onDragStart && onDragStart('bar');
           } : undefined}
-          style={{ ...cs(color), cursor: canDrag ? 'grab' : 'default', pointerEvents: canDrag ? 'auto' : 'none' }}
+          style={{
+            ...cs(color),
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            [isBottom ? 'bottom' : 'top']: 4 + i * BAR_STEP,
+            zIndex: 10 + i,
+            cursor: canDrag ? 'grab' : 'default',
+            pointerEvents: canDrag ? 'auto' : 'none',
+          }}
         />
       );
     });
-    // Badge goes AFTER pieces so it appears at the centre-side end (column: bottom; column-reverse: top).
-    const badge = count > 5
-      ? <div key="badge" style={{ color: '#ffd700', fontSize: 9, fontFamily: 'Space Mono', fontWeight: 700, flexShrink: 0 }}>{count}</div>
+    const badge = count > MAX_SHOWN
+      ? <div key="badge" style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          [isBottom ? 'bottom' : 'top']: 4 + (MAX_SHOWN - 1) * BAR_STEP + 6,
+          background: '#1a1a1a', color: '#ffd700',
+          fontSize: 9, fontFamily: 'Space Mono', fontWeight: 700,
+          borderRadius: 10, padding: '1px 5px',
+          zIndex: 30, pointerEvents: 'none',
+        }}>{count}</div>
       : null;
     return [...pieces, badge];
   };
@@ -290,22 +306,20 @@ function Bar({ whiteCount, blackCount, selectedPoint, onClickBar, onDragStart, o
         flexShrink: 0, zIndex: 5, touchAction: 'none',
       }}
     >
-      {/* Opponent's pieces — top half, stack top-down */}
+      {/* Opponent's pieces — top half, stack downward from outer edge toward centre */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: halfH,
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'flex-start', paddingTop: 4, gap: 3, overflow: 'hidden',
+        overflow: 'hidden',
       }}>
-        {renderGroup(topColor, topCount)}
+        {renderGroup(topColor, topCount, false)}
       </div>
 
-      {/* Player's own pieces — bottom half, stack bottom-up (closest to board centre) */}
+      {/* Player's own pieces — bottom half, stack upward from outer edge toward centre */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: halfH,
-        display: 'flex', flexDirection: 'column-reverse', alignItems: 'center',
-        justifyContent: 'flex-start', paddingBottom: 4, gap: 3, overflow: 'hidden',
+        overflow: 'hidden',
       }}>
-        {renderGroup(bottomColor, bottomCount)}
+        {renderGroup(bottomColor, bottomCount, true)}
       </div>
     </div>
   );
