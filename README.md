@@ -19,42 +19,29 @@ A polished multiplayer Backgammon (Tavla) game built with React + Vite, powered 
 
 ## Setup
 
-### 1. Get an Ably API Key
+### 1. Ably (token auth)
 
-1. Sign up at [ably.com](https://ably.com) (free tier available)
-2. Create a new App
-3. Copy your API Key from the dashboard
+Realtime messaging uses [Ably](https://ably.com) with **token auth**: the API key stays on the
+server, and `/api/ably-token` hands each player a short-lived token that can only publish/subscribe
+to its own room channel (`backgammon-<CODE>`).
+
+- **Vercel**: Project → Settings → Environment Variables → add `ABLY_API_KEY`
+- **Local**: copy `.env.example` to `.env.local` and set `ABLY_API_KEY`
+
+Never prefix it with `VITE_`: that would bundle the key into the client.
 
 ### 2. Local Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Create env file
-cp .env.example .env
-# Edit .env and add your Ably API key
-
-# Start dev server
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173). The Vite dev server also serves `/api/ably-token`.
 
 ### 3. Deploy to Vercel
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Add environment variable in Vercel dashboard:
-# VITE_ABLY_API_KEY = your_key_here
-```
-
-Or deploy via the Vercel dashboard — import the repo and set `VITE_ABLY_API_KEY` in Environment Variables.
+Import the repo in the Vercel dashboard (or run `vercel`) and set `ABLY_API_KEY` in Environment Variables.
 
 ## How to Play
 
@@ -69,9 +56,7 @@ Or deploy via the Vercel dashboard — import the repo and set `VITE_ABLY_API_KE
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_ABLY_API_KEY` | Your Ably API key (required) |
-
-> ⚠️ **Security Note**: For production, use [Ably Token Authentication](https://ably.com/docs/auth/token) instead of exposing your API key. Create a serverless function (`/api/ably-token`) to issue tokens.
+| `ABLY_API_KEY` | Your Ably API key (server-side only, required) |
 
 ## Tech Stack
 

@@ -6,7 +6,7 @@ import {
   getValidMoves, getMovableSources, hasAnyMove, canBearOff, opponent
 } from '../game/backgammon';
 
-const generateRoomId = () => Math.random().toString(36).substr(2, 6).toUpperCase();
+const generateRoomId = () => Array.from({ length: 6 }, () => '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 36)]).join('');
 const generateClientId = () => `p-${Math.random().toString(36).substr(2, 8)}`;
 
 // ─── PATH FINDER ──────────────────────────────────────────────────────────────
@@ -82,15 +82,29 @@ export function useAblyGame() {
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
   useEffect(() => { autoCollectRef.current = autoCollect; }, [autoCollect]);
 
-  const initAbly = useCallback(async () => {
-    const key = import.meta.env.VITE_ABLY_API_KEY;
-    if (!key) throw new Error('VITE_ABLY_API_KEY is not set');
-
-    const ably = new Ably.Realtime({ key, clientId: clientId.current });
+  const initAbly = useCallback(async (room) => {
+    // Token auth: the server signs a short-lived token scoped to this room's channel,
+    // so the API key never reaches the browser
+    const ably = new Ably.Realtime({
+      authUrl: '/api/ably-token',
+      authParams: { room, player: clientId.current },
+      clientId: clientId.current,
+    });
     ablyRef.current = ably;
     await new Promise((resolve, reject) => {
-      ably.connection.on('connected', resolve);
-      ably.connection.on('failed', reject);
+      const fail = (err) => {
+        ably.connection.off(onChange);
+        ably.close();
+        reject(new Error(err?.message || 'Could not connect to Ably'));
+      };
+      const onChange = ({ current, reason }) => {
+        if (current === 'connected') { ably.connection.off(onChange); resolve(); }
+        else if (current === 'failed' || current === 'suspended') fail(reason);
+        // Token endpoint errors are retried silently as 'disconnected'; surface them instead
+        else if (current === 'disconnected' && reason?.code >= 40100 && reason?.code < 40200) fail(reason);
+        else if (current === 'disconnected' && reason?.code === 80019) fail(reason);
+      };
+      ably.connection.on(onChange);
     });
     return ably;
   }, []);
@@ -158,8 +172,8 @@ export function useAblyGame() {
 
   // ─── CREATE ROOM ─────────────────────────────────────────────────────────
   const createRoom = useCallback(async () => {
-    const ably = await initAbly();
     const id = generateRoomId();
+    const ably = await initAbly(id);
     const channel = ably.channels.get(`backgammon-${id}`);
     channelRef.current = channel;
 
@@ -181,7 +195,7 @@ export function useAblyGame() {
 
   // ─── JOIN ROOM ────────────────────────────────────────────────────────────
   const joinRoom = useCallback(async (id) => {
-    const ably = await initAbly();
+    const ably = await initAbly(id);
     const channel = ably.channels.get(`backgammon-${id}`);
     channelRef.current = channel;
 
