@@ -1,15 +1,16 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import { createAblyTokenRequest } from './server/ablyToken.js';
 
 // Serves /api/ably-token during `npm run dev` so local dev works without `vercel dev`
 const ablyTokenDevApi = (apiKey) => ({
   name: 'ably-token-dev-api',
+  apply: 'serve', // dev only; production builds never load the Ably SDK
   configureServer(server) {
     server.middlewares.use('/api/ably-token', async (req, res) => {
       const params = new URL(req.url, 'http://localhost').searchParams;
       let result;
       try {
+        const { createAblyTokenRequest } = await import('./server/ablyToken.js');
         result = await createAblyTokenRequest(apiKey, params.get('room'), params.get('player'));
       } catch {
         result = { status: 500, body: { error: 'Failed to create Ably token' } };
